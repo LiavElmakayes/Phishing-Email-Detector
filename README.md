@@ -1,7 +1,3 @@
-📄 README.md
-markdown
-Copy
-Edit
 # 🛡️ Phishing Email Detector
 
 This project is a full-stack web application designed to detect phishing emails using content analysis and SpamAssassin. It allows users to upload `.eml` files and receive a classification indicating whether the email is **Phishing** or **Legitimate**.
@@ -35,14 +31,6 @@ This project is a full-stack web application designed to detect phishing emails 
 - If `score >= 5.0` → Email is classified as **Phishing**
 - Otherwise → Classified as **Legitimate**
 
-## 📁 Project Structure
-
-Phishing-Email-Detector/ │ ├── client/ # React frontend │ ├── public/ │ └── src/ │ └── Components/ │ ├── ChatBotPopup/ │ ├── EmailUploader/ │ ├── Footer/ │ ├── NavBar/ │ └── ScanResult/ │ ├── server/ # Node.js backend │ ├── uploads/ # Temporary storage for .eml files │ └── index.js # Main server logic │ └── README.md # Project description
-
-bash
-Copy
-Edit
-
 ## 🚀 Getting Started
 
 ### Clone the repo
@@ -50,20 +38,15 @@ Edit
 git clone https://github.com/LiavElmakayes/Phishing-Email-Detector.git
 cd Phishing-Email-Detector
 📦 Backend Setup
-bash
-Copy
-Edit
 cd server
 npm install express multer cors
 Ensure spamassassin is installed on your system and available from the terminal.
 
 💻 Frontend Setup
-bash
-Copy
-Edit
 cd ../client
 npm install
 npm start
+
 Frontend runs on: http://localhost:3000
 Backend runs on: http://localhost:5000
 
@@ -75,14 +58,6 @@ Chatbot guidance for borderline cases
 Enhanced visual analytics
 
 🧑‍💻 Developed By
-Liav Elmakayes
-Third-year Computer Science student at Sami Shamoon College
-Email security enthusiast | Full Stack Developer | Ethical Hacking Passionate
-
-yaml
-Copy
-Edit
-
----
-
-Let me know if you want me to add this to your GitHub repo or adjust anything!
+Liav Elmakayes & Yuval Sangur
+Third-year Computer Science students at SCE
+Full Stack Developers
