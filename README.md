@@ -31,7 +31,8 @@ This project is a full-stack web application designed to detect phishing emails 
 - `score >= 5.0` → Email is classified as **Phishing**
 - `score < 5.0` → Email is classified as **Legitimate**
 
-🐳 Docker Setup for SpamAssassin
+## 🐳 Docker Setup for SpamAssassin
+
 To run SpamAssassin without installing it directly on your system, use Docker:
 docker pull instantlinux/spamassassin
 docker run -d --name spamassassin -p 783:783 instantlinux/spamassassin
