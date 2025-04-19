@@ -50,7 +50,7 @@ git clone https://github.com/LiavElmakayes/Phishing-Email-Detector.git
 cd Phishing-Email-Detector
 ```
 ### 📦 Backend Setup
-💡 The backend should be run from within the Ubuntu terminal if you're using WSL/Linux.
+💡 The backend should be run from within the Ubuntu terminal if you're using WSL/Linux.  
 Make sure SpamAssassin is also running (via Docker) before starting the server.
 ```
 cd server
@@ -68,11 +68,11 @@ npm start
 Frontend runs on: http://localhost:3000
 Backend runs on: http://localhost:5000
 
-## 💬 Future Features
+### 💬 Future Features
 Chatbot guidance for borderline cases
 Enhanced visual analytics
 
-🧑‍💻 Developed By
-Liav Elmakayes & Yuval Sangur
-🎓 Third-year Computer Science students at SCE
-💻 Full Stack Developers
+### 🧑‍💻 Developed By  
+Liav Elmakayes & Yuval Sangur  
+🎓 Third-year Computer Science students at SCE  
+💻 Full Stack Developers  
