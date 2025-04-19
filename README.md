@@ -34,42 +34,42 @@ This project is a full-stack web application designed to detect phishing emails 
 ## 🐳 Docker Setup for SpamAssassin
 
 To run SpamAssassin without installing it directly on your system, use Docker.
-
-Open a terminal (e.g., Command Prompt, PowerShell, or your terminal app on Linux/Mac), and run:
-
-```bash
+1. Make sure Docker Desktop is running.
+2. Open a terminal (e.g., Command Prompt, PowerShell, or a terminal app on Linux/Mac), and run the following commands:
+```
 docker pull instantlinux/spamassassin
 docker run -d --name spamassassin -p 783:783 instantlinux/spamassassin
 ```
 This will start the SpamAssassin server in a container on port 783, which the Node.js backend connects to for scanning emails.
 
-Make sure Docker Desktop is running before executing these commands.
+## 🚀 Getting Started (Setup Guide)
 
-## 🚀 Getting Started
-
-### Clone the repo
-```bash
+### 📥 Clone the Repo
+```
 git clone https://github.com/LiavElmakayes/Phishing-Email-Detector.git
 cd Phishing-Email-Detector
-📦 Backend Setup
+```
+### 📦 Backend Setup
+💡 The backend should be run from within the Ubuntu terminal if you're using WSL/Linux.
+Make sure SpamAssassin is also running (via Docker) before starting the server.
+```
 cd server
-npm install express multer cors
+npm install 
 node index.js
-💡 The backend should be run from within the Ubuntu terminal if you're using WSL/Linux. Make sure SpamAssassin is also running (via Docker) before starting the server.
+```
 
-💻 Frontend Setup
-cd ../client
+### 💻 Frontend Setup
+```
+cd client
 npm install
 npm start
+```
 
 Frontend runs on: http://localhost:3000
 Backend runs on: http://localhost:5000
 
-💬 Future Features
-AI-based phishing classification using LLMs (BERT/GPT)
-
+## 💬 Future Features
 Chatbot guidance for borderline cases
-
 Enhanced visual analytics
 
 🧑‍💻 Developed By
