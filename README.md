@@ -34,6 +34,7 @@ This project is a full-stack web application designed to detect phishing emails 
 ## 🐳 Docker Setup for SpamAssassin
 
 To run SpamAssassin without installing it directly on your system, use Docker:
+Open a terminal (e.g., Command Prompt, PowerShell, or your terminal app on Linux/Mac), and run:
 
 ```bash
 docker pull instantlinux/spamassassin
