@@ -33,7 +33,7 @@ This project is a full-stack web application designed to detect phishing emails 
 
 ## 🐳 Docker Setup for SpamAssassin
 
-To run SpamAssassin without installing it directly on your system, use Docker:
+To run SpamAssassin without installing it directly on your system, use Docker.
 
 Open a terminal (e.g., Command Prompt, PowerShell, or your terminal app on Linux/Mac), and run:
 
@@ -42,6 +42,7 @@ docker pull instantlinux/spamassassin
 docker run -d --name spamassassin -p 783:783 instantlinux/spamassassin
 ```
 This will start the SpamAssassin server in a container on port 783, which the Node.js backend connects to for scanning emails.
+
 Make sure Docker Desktop is running before executing these commands.
 
 ## 🚀 Getting Started
