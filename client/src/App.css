@@ -1,0 +1,21 @@
+/* App.css */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #f3f3f3;
+  overflow-x: hidden;
+}
+
+.app {
+  font-family: sans-serif;
+  padding: 20px;
+  background-color: transparent;
+  min-height: 80.8vh;
+}
+
+.app>.footer {
+  margin-top: auto;
+  /* Pushes the footer to the bottom */
+}

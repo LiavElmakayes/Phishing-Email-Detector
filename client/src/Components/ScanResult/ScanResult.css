@@ -1,0 +1,102 @@
+/* ScanResult.css */
+.scan-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    width: min(90%, 60rem);
+    margin: 0 auto;
+    padding: clamp(1rem, 3vw, 2rem);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    top: 0;
+}
+
+.result-icon {
+    margin-bottom: 1rem;
+    font-size: clamp(2rem, 5vw, 2.5rem);
+}
+
+.result-text {
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    color: #3c3c3c;
+    margin-bottom: 1rem;
+}
+
+.result-percentage {
+    margin-right: 0.5rem;
+}
+
+.phishing {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+}
+
+.legitimate {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+}
+
+.result-details {
+    display: flex;
+    margin-top: 1.5rem;
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    color: #555;
+    text-align: center;
+    width: min(90%, 80%);
+    justify-content: center;
+    line-height: 1.5;
+}
+
+.result-details p {
+    margin: 0.5rem 0;
+}
+
+.progress-bar {
+    width: min(90%, 80%);
+    height: clamp(15px, 3vw, 20px);
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    margin-top: 1.5rem;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+
+.alert-icon {
+    color: rgb(254, 59, 59);
+}
+
+.legitimate-icon {
+    color: rgb(69, 178, 91);
+}
+
+@media (max-width: 480px) {
+    .scan-result {
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .result-text {
+        flex-direction: column;
+    }
+
+    .result-percentage {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+
+    .result-details {
+        width: 95%;
+    }
+}

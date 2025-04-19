@@ -1,0 +1,59 @@
+/* ChatbotPopup.css */
+.chatbot-popup {
+    position: fixed;
+    bottom: clamp(40px, 8vw, 60px);
+    right: clamp(20px, 5vw, 30px);
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: clamp(15px, 3vw, 20px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: min(90%, 300px);
+    transition: all 0.3s ease;
+    z-index: 2000;
+}
+
+.chatbot-header {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: #333;
+}
+
+.chatbot-text {
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.4;
+}
+
+.chatbot-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: clamp(8px, 2vw, 10px) clamp(12px, 2.5vw, 15px);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.chatbot-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.chatbot-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 480px) {
+    .chatbot-popup {
+        width: 85%;
+        right: 7.5%;
+        bottom: 50px;
+    }
+}

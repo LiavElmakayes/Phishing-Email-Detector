@@ -1,0 +1,231 @@
+/* EmailUploader.css */
+
+.upload-area-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgb(255, 255, 255);
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    padding: clamp(20px, 5vw, 40px);
+    width: min(90%, 45rem);
+    margin: 0 auto;
+    margin-bottom: 0.5rem;
+    min-height: 250px;
+}
+
+.center-upload-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 1rem;
+}
+
+.upload-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgb(255, 255, 255);
+    text-align: center;
+    border: 2px dashed #ccc;
+    padding: clamp(20px, 5vw, 40px);
+    border-radius: 8px;
+    width: min(90%, 40rem);
+    min-height: 200px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+    border: 2px dashed #aeaeae;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upload-button {
+    cursor: pointer;
+    background-color: #84a1de;
+    padding: clamp(8px, 2vw, 12px) clamp(15px, 3vw, 25px);
+    border-radius: 8px;
+    display: inline-block;
+    font-size: clamp(14px, 2vw, 16px);
+    font-weight: bold;
+    color: white;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 1rem;
+}
+
+.upload-button:hover {
+    background-color: #6b8bcf;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.upload-button:active {
+    background-color: #5c7fb1;
+    transform: translateY(0);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upload-button:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(99, 140, 255, 0.7);
+}
+
+.upload-area.drag-active {
+    background-color: rgba(0, 0, 0, 0.05);
+    border: 2px dashed #84a1de;
+}
+
+.upload-area.loading {
+    border: 2px solid #84a1de;
+    background-color: rgba(132, 161, 222, 0.05);
+}
+
+.upload-area.error {
+    border: 2px solid #ff4444;
+    background-color: rgba(255, 68, 68, 0.05);
+}
+
+.error-message {
+    color: #ff4444;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    text-align: center;
+    font-weight: bold;
+}
+
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1rem;
+    height: 80px;
+}
+
+.spinner-icon {
+    font-size: 2.5rem;
+    color: #3962ba;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    font-size: 1.1rem;
+    color: #3962ba;
+    font-weight: bold;
+    margin: 0;
+    text-align: center;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeInOut {
+    0% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
+}
+
+.title-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0.5rem;
+    width: min(90%, 800px);
+    margin: 0 auto;
+}
+
+.title {
+    margin-bottom: 10px;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    color: #333;
+}
+
+.description {
+    margin-top: 0;
+    padding-bottom: 5px;
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: #666;
+    max-width: 600px;
+}
+
+.upload-icon {
+    color: #3962ba;
+    margin-top: 6px;
+    font-size: clamp(20px, 3vw, 25px);
+}
+
+.circle {
+    background-color: #d6e9fa;
+    border-radius: 50%;
+    width: clamp(35px, 8vw, 43px);
+    height: clamp(35px, 8vw, 43px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.first-desc {
+    font-weight: bold;
+    margin-bottom: 0;
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+}
+
+.second-desc {
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    color: #989898;
+    margin-top: 7px;
+}
+
+@media (max-width: 480px) {
+    .upload-area-container {
+        padding: 15px;
+    }
+
+    .upload-area {
+        padding: 15px;
+    }
+
+    .title {
+        font-size: 1.2rem;
+    }
+
+    .description {
+        font-size: 0.8rem;
+    }
+}
