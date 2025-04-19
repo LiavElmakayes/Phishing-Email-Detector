@@ -27,9 +27,13 @@ This project is a full-stack web application designed to detect phishing emails 
 5. If the score is borderline or unclear, a chatbot is triggered to ask the user questions for better judgment (coming soon).
 
 ## 🔍 SpamAssassin Output Interpretation
+SpamAssassin assigns a **spam score** based on email content.  
+In this project, we convert that score into a **Phishing Likelihood Percentage** and always display the result as "`X% Phishing`".  
 
-- `score >= 5.0` → Email is classified as **Phishing**
-- `score < 5.0` → Email is classified as **Legitimate**
+- Higher scores indicate higher likelihood of phishing.
+- For example: a score of 5.0 might display as "50% Phishing", while a score of 8.6 would show "86% Phishing".
+- This approach gives users a better sense of **risk level**, rather than a strict yes/no label.
+
 
 ## 🐳 Docker Setup for SpamAssassin
 
@@ -65,7 +69,7 @@ npm install
 npm start
 ```
 
-Frontend runs on: http://localhost:3000
+Frontend runs on: http://localhost:3000  
 Backend runs on: http://localhost:5000
 
 ### 💬 Future Features
