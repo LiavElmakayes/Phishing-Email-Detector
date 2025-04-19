@@ -28,8 +28,16 @@ This project is a full-stack web application designed to detect phishing emails 
 
 ## 🔍 SpamAssassin Output Interpretation
 
-- If `score >= 5.0` → Email is classified as **Phishing**
-- Otherwise → Classified as **Legitimate**
+- `score >= 5.0` → Email is classified as **Phishing**
+- `score < 5.0` → Email is classified as **Legitimate**
+
+🐳 Docker Setup for SpamAssassin
+To run SpamAssassin without installing it directly on your system, use Docker:
+docker pull instantlinux/spamassassin
+docker run -d --name spamassassin -p 783:783 instantlinux/spamassassin
+This will start the SpamAssassin server in a container on port 783, which the Node.js backend connects to for scanning emails.
+
+Make sure Docker Desktop is running before executing these commands.
 
 ## 🚀 Getting Started
 
@@ -40,7 +48,8 @@ cd Phishing-Email-Detector
 📦 Backend Setup
 cd server
 npm install express multer cors
-Ensure spamassassin is installed on your system and available from the terminal.
+node index.js
+💡 The backend should be run from within the Ubuntu terminal if you're using WSL/Linux. Make sure SpamAssassin is also running (via Docker) before starting the server.
 
 💻 Frontend Setup
 cd ../client
@@ -59,5 +68,5 @@ Enhanced visual analytics
 
 🧑‍💻 Developed By
 Liav Elmakayes & Yuval Sangur
-Third-year Computer Science students at SCE
-Full Stack Developers
+🎓 Third-year Computer Science students at SCE
+💻 Full Stack Developers
