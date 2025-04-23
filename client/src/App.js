@@ -7,6 +7,7 @@ import './App.css';
 import NavBar from './Components/NavBar/NavBar';
 import Footer from './Components/Footer/Footer';
 
+
 function App() {
   const [scanResult, setScanResult] = useState(null);
   const [showChatbot, setShowChatbot] = useState(false);
@@ -21,7 +22,7 @@ function App() {
   };
 
   return (
-    <>
+    <>  
       <NavBar />
       <div className="app">
         <EmailUploader onScanResult={handleScanResult} />

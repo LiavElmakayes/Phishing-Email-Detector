@@ -45,8 +45,8 @@ const ScanResult = ({ result }) => {
         <div className={`scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
             <div className="result-icon">{icon}</div>
             <div className="result-text">
-                <span className="result-percentage">{percentage}%</span>
-                <span>Phishing</span>
+                <span className="result-percentage">THE RISK SCORE IS: {percentage}%</span>
+                <span className="result-percentage">PHISHING</span>
             </div>
             <div className="progress-bar">
                 <div
