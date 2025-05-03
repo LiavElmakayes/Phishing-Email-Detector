@@ -1,4 +1,3 @@
-// EmailUploader.jsx
 import React, { useState, useRef } from 'react';
 import './EmailUploader.css';
 import { GrUpload } from "react-icons/gr";
@@ -59,7 +58,7 @@ const EmailUploader = ({ onScanResult }) => {
             const formData = new FormData();
             formData.append('emlFile', file);
 
-            fetch('/analyze', {
+            fetch('http://localhost:5000/analyze', {
                 method: 'POST',
                 body: formData
             })
@@ -71,7 +70,10 @@ const EmailUploader = ({ onScanResult }) => {
                 })
                 .then(data => {
                     setIsLoading(false);
-                    onScanResult(data);
+                    onScanResult({
+                        ...data,
+                        filename: file.name
+                    });
                     setShowScrollPrompt(true);
                     // Hide the prompt after 5 seconds
                     setTimeout(() => setShowScrollPrompt(false), 5000);
@@ -87,10 +89,11 @@ const EmailUploader = ({ onScanResult }) => {
     return (
         <div>
             <div className='title-area'>
-                <h1 className='title'>Check Your Email for Phishing Threats
+                <h1
+                    className='title'>Check Your Email for Phishing Threats
                 </h1>
             </div>
-            
+
             <div className="center-upload-area">
                 <div className="upload-area-container">
                     {showScrollPrompt && (

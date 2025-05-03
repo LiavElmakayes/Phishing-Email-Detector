@@ -12,11 +12,7 @@
     font-size: clamp(12px, 2vw, 13px);
     padding: 0.25rem;
     text-align: center;
-    position: relative;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
+    margin-top: 2rem;
 }
 
 @media (max-width: 768px) {

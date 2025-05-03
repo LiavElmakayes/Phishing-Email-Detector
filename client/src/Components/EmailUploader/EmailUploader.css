@@ -1,17 +1,17 @@
-/* EmailUploader.css */
-
 .upload-area-container {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     background-color: rgb(255, 255, 255);
     border: 2px solid #ccc;
     border-radius: 8px;
-    padding: clamp(20px, 5vw, 40px);
-    width: min(90%, 45rem);
+    padding: clamp(30px, 6vw, 60px);
+    width: min(95%, 60rem);
     margin: 0 auto;
     margin-bottom: 0.5rem;
-    min-height: 250px;
+    min-height: 350px;
+    box-sizing: border-box;
 }
 
 .center-upload-area {
@@ -19,7 +19,8 @@
     justify-content: center;
     align-items: center;
     width: 100%;
-    padding: 1rem;
+    padding: 1.5rem;
+    box-sizing: border-box;
 }
 
 .upload-area {
@@ -30,12 +31,15 @@
     background-color: rgb(255, 255, 255);
     text-align: center;
     border: 2px dashed #ccc;
-    padding: clamp(20px, 5vw, 40px);
+    padding: clamp(30px, 6vw, 60px);
     border-radius: 8px;
-    width: min(90%, 40rem);
-    min-height: 200px;
+    width: min(95%, 55rem);
+    min-height: 300px;
+    height: 300px;
     position: relative;
     transition: all 0.3s ease;
+    box-sizing: border-box;
+    margin: 0 auto;
 }
 
 .upload-area:hover {
@@ -84,6 +88,8 @@
 .upload-area.loading {
     border: 2px solid #84a1de;
     background-color: rgba(132, 161, 222, 0.05);
+    height: 300px;
+    min-height: 300px;
 }
 
 .upload-area.error {
@@ -105,6 +111,10 @@
     align-items: center;
     margin-bottom: 1rem;
     height: 80px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .spinner-icon {
@@ -165,21 +175,23 @@
     justify-content: center;
     align-items: center;
     text-align: center;
-    width: min(90%, 800px);
+    width: min(95%, 1000px);
     margin: 0 auto;
+    padding: 0 1.5rem;
+    box-sizing: border-box;
 }
 
 .title {
-    margin-bottom: 10px;
-    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    margin-bottom: 15px;
+    font-size: clamp(2rem, 5vw, 3rem);
     color: #333;
 }
 
 .description {
     margin-top: 0;
-    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    font-size: clamp(1.1rem, 2.5vw, 1.3rem);
     color: #666;
-    max-width: 600px;
+    max-width: 800px;
 }
 
 .upload-icon {
@@ -202,13 +214,13 @@
     font-weight: bold;
     margin-bottom: 0;
     margin-top: 0;
-    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    font-size: clamp(1.2rem, 3vw, 1.4rem);
 }
 
 .second-desc {
-    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    font-size: clamp(1rem, 2.5vw, 1.1rem);
     color: #989898;
-    margin-top: 7px;
+    margin-top: 10px;
 }
 
 @media (max-width: 480px) {
@@ -255,6 +267,7 @@
         transform: translateX(100%);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
@@ -262,9 +275,12 @@
 }
 
 @keyframes bounce {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-5px);
     }

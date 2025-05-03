@@ -3,13 +3,13 @@ import React from 'react';
 import './ScanResult.css';
 import { FaShieldAlt, FaExclamationTriangle } from 'react-icons/fa';
 
-const ScanResult = ({ result }) => {
+const ScanResult = ({ result, filename }) => {
     const percentage = result * 10;
     const isLegitimate = percentage < 50;
 
     const icon = isLegitimate
-        ? <FaShieldAlt size={36} className="legitimate-icon" />
-        : <FaExclamationTriangle size={36} className="alert-icon" />;
+        ? <FaShieldAlt size={40} className="legitimate-icon" />
+        : <FaExclamationTriangle size={40} className="alert-icon" />;
 
     const getProgressBarColor = (percentage) => {
         let r, g, b;
@@ -37,16 +37,15 @@ const ScanResult = ({ result }) => {
         return `rgb(${r}, ${g}, ${b})`;
     };
 
-
-
     const progressBarColor = getProgressBarColor(percentage);
 
     return (
         <div className={`scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
             <div className="result-icon">{icon}</div>
             <div className="result-text">
-                <span className="result-percentage">THE RISK SCORE IS: {percentage}%</span>
-                <span className="result-percentage">PHISHING</span>
+                <span className="result-percentage">Risk Score: {percentage}% Phishing</span>
+                <span className="result-filename">File: {filename}</span>
+
             </div>
             <div className="progress-bar">
                 <div

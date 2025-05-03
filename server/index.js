@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
+const { simpleParser } = require('mailparser');
 
 const app = express();
 const PORT = 5000;
@@ -13,6 +14,112 @@ app.use(express.json());
 
 // Set up multer to handle file uploads
 const upload = multer({ dest: 'uploads/' });
+
+// Function to format sender information
+const formatSender = (parsed) => {
+    if (!parsed.from) return 'Unknown Sender';
+
+    console.log('Raw from object:', parsed.from);
+
+    // If we have the value array with sender details
+    if (parsed.from.value && parsed.from.value.length > 0) {
+        const sender = parsed.from.value[0];
+        console.log('Sender details:', sender);
+
+        if (sender.name && sender.address) {
+            return `${sender.name} <${sender.address}>`;
+        }
+        return sender.address || 'Unknown Sender';
+    }
+
+    // If we have the text representation
+    if (parsed.from.text) {
+        console.log('Using text representation:', parsed.from.text);
+        return parsed.from.text;
+    }
+
+    return 'Unknown Sender';
+};
+
+// New endpoint to get all emails
+app.get('/emails', async (req, res) => {
+    try {
+        const emailsDir = path.join(__dirname, 'emails');
+        const files = fs.readdirSync(emailsDir).filter(f => f.endsWith('.eml'));
+        const emails = [];
+
+        for (const file of files) {
+            const emlPath = path.join(emailsDir, file);
+            const emlContent = fs.readFileSync(emlPath);
+            const parsed = await simpleParser(emlContent);
+
+            const sender = formatSender(parsed);
+            console.log(`Formatted sender for ${file}:`, sender);
+
+            emails.push({
+                id: file,
+                sender: sender,
+                subject: parsed.subject || 'No Subject',
+                snippet: parsed.text?.slice(0, 100) || parsed.html?.slice(0, 100) || 'No content',
+                time: parsed.date || new Date(),
+                read: false,
+                starred: false,
+                important: false,
+                hasAttachment: parsed.attachments?.length > 0,
+                category: 'primary'
+            });
+        }
+
+        res.json(emails);
+    } catch (error) {
+        console.error('Error reading emails:', error);
+        res.status(500).json({ error: 'Failed to read emails' });
+    }
+});
+
+// New endpoint to get a specific email
+app.get('/emails/:id', async (req, res) => {
+    try {
+        const emailId = req.params.id;
+        const emlPath = path.join(__dirname, 'emails', emailId);
+
+        console.log('Attempting to read email file:', emlPath);
+
+        if (!fs.existsSync(emlPath)) {
+            console.error('Email file not found:', emlPath);
+            return res.status(404).json({ error: 'Email not found' });
+        }
+
+        const emlContent = fs.readFileSync(emlPath, 'utf8');
+        console.log('Email file read successfully');
+
+        const parsed = await simpleParser(emlContent);
+        console.log('Email parsed successfully');
+        console.log('Raw parsed from:', parsed.from);
+
+        const sender = formatSender(parsed);
+        console.log('Formatted sender:', sender);
+
+        const responseData = {
+            id: emailId,
+            sender: sender,
+            subject: parsed.subject || 'No Subject',
+            content: parsed.text || parsed.html || 'No content',
+            time: parsed.date || new Date(),
+            attachments: parsed.attachments || []
+        };
+
+        console.log('Sending response:', JSON.stringify(responseData, null, 2));
+
+        res.json(responseData);
+    } catch (error) {
+        console.error('Error reading email:', error);
+        res.status(500).json({
+            error: 'Failed to read email',
+            details: error.message
+        });
+    }
+});
 
 app.post('/analyze', upload.single('emlFile'), (req, res) => {
     // Ensure the file path is in WSL-compatible format with forward slashes
@@ -46,7 +153,7 @@ app.post('/analyze', upload.single('emlFile'), (req, res) => {
 const parseSpamassassinResult = (stdout) => {
     // Regex to extract the score from the SpamAssassin output
     const scoreMatch = stdout.match(/score=([0-9]+\.[0-9]+)/);
-    
+
     if (scoreMatch) {
         const score = parseFloat(scoreMatch[1]);
         const legitimacy = score >= 5.0 ? 'Phishing' : 'Legitimate'; // If score >= 5.0, classify as phishing
