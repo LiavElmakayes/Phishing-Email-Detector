@@ -17,7 +17,7 @@ const Tabs = ({ selectedTab, setSelectedTab }) => {
 
             <button
                 className={`tab-button ${selectedTab === 'promotions' ? 'active' : ''}`}
-                onClick={() => setSelectedTab('promotions')}
+                onClick={() => { }}
             >
                 <span className="tab-content">
                     <Tag className="tab-icon" />
@@ -28,7 +28,7 @@ const Tabs = ({ selectedTab, setSelectedTab }) => {
 
             <button
                 className={`tab-button ${selectedTab === 'social' ? 'active' : ''}`}
-                onClick={() => setSelectedTab('social')}
+                onClick={() => { }}
             >
                 <span className="tab-content">
                     <Users className="tab-icon" />
@@ -39,7 +39,7 @@ const Tabs = ({ selectedTab, setSelectedTab }) => {
 
             <button
                 className={`tab-button ${selectedTab === 'updates' ? 'active' : ''}`}
-                onClick={() => setSelectedTab('updates')}
+                onClick={() => { }}
             >
                 <span className="tab-content">
                     <Bell className="tab-icon" />

@@ -1,10 +1,11 @@
 .right-sidebar {
-    display: none;
-    width: 3.5rem;
+    width: 3rem;
     background-color: white;
     border-left: 1px solid #e5e7eb;
-    height: 100%;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0;
 }
 
 @media (min-width: 768px) {
@@ -16,24 +17,67 @@
 .sidebar-buttons {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
-    height: 100%;
-    padding: 1rem 0;
-    justify-content: flex-start;
+    gap: 0.75rem;
 }
 
 .sidebar-button {
-    padding: 0.5rem;
-    border-radius: 9999px;
-    color: #4b5563;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    background-color: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .sidebar-button:hover {
-    background-color: #f3f4f6;
+    transform: translateY(-1px);
+}
+
+.sidebar-button:active {
+    transform: translateY(0);
 }
 
 .sidebar-icon {
     width: 1.25rem;
     height: 1.25rem;
+}
+
+/* Calendar button */
+.calendar-button {
+    color: #2563eb;
+}
+
+.calendar-button:hover {
+    background-color: #dbeafe;
+}
+
+/* Tasks button */
+.tasks-button {
+    color: #7c3aed;
+}
+
+.tasks-button:hover {
+    background-color: #ede9fe;
+}
+
+/* Contacts button */
+.contacts-button {
+    color: #059669;
+}
+
+.contacts-button:hover {
+    background-color: #d1fae5;
+}
+
+/* Keep button */
+.keep-button {
+    color: #f59e0b;
+}
+
+.keep-button:hover {
+    background-color: #fef3c7;
 }

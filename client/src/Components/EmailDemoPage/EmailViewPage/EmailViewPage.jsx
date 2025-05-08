@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { FaShieldAlt, FaExclamationTriangle } from 'react-icons/fa';
+import ChatBot from '../../ChatBot/ChatBot';
 import './EmailViewPage.css';
 
 const EmailViewPage = () => {
@@ -9,6 +11,9 @@ const EmailViewPage = () => {
     const [email, setEmail] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [scanResult, setScanResult] = useState(null);
+    const [isScanning, setIsScanning] = useState(false);
+    const [aiAnalysisScore, setAiAnalysisScore] = useState(null);
 
     useEffect(() => {
         const fetchEmail = async () => {
@@ -21,6 +26,8 @@ const EmailViewPage = () => {
                 const data = await response.json();
                 console.log('Received email data:', data);
                 setEmail(data);
+                // Automatically scan the email when it's loaded
+                scanEmail(data);
             } catch (err) {
                 console.error('Error fetching email:', err);
                 setError(err.message);
@@ -33,6 +40,65 @@ const EmailViewPage = () => {
             fetchEmail();
         }
     }, [id]);
+
+    const scanEmail = async (emailData) => {
+        setIsScanning(true);
+        try {
+            const response = await fetch('http://localhost:5000/analyze-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subject: emailData.subject,
+                    content: emailData.content,
+                    sender: emailData.sender
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to scan email');
+            }
+
+            const result = await response.json();
+            console.log('Raw scan result:', result);
+            console.log('Result value:', result.result);
+            console.log('Legitimacy:', result.legitimacy);
+            setScanResult(result);
+        } catch (err) {
+            console.error('Error scanning email:', err);
+            setError('Failed to scan email');
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    const getProgressBarColor = (percentage) => {
+        let r, g, b;
+
+        if (percentage <= 25) {
+            const ratio = percentage / 25;
+            r = Math.round(0 + (76 - 0) * ratio);
+            g = Math.round(200 + (175 - 200) * ratio);
+            b = Math.round(0 + (80 - 0) * ratio);
+        } else if (percentage <= 50) {
+            const ratio = (percentage - 25) / 25;
+            r = Math.round(76 + (255 - 76) * ratio);
+            g = Math.round(175 + (152 - 175) * ratio);
+            b = Math.round(80 + (0 - 80) * ratio);
+        } else {
+            const ratio = (percentage - 50) / 50;
+            r = Math.round(255 + (244 - 255) * ratio);
+            g = Math.round(152 + (67 - 152) * ratio);
+            b = Math.round(0 + (54 - 0) * ratio);
+        }
+
+        return `rgb(${r}, ${g}, ${b})`;
+    };
+
+    const handleNewAnalysis = (newScore) => {
+        setAiAnalysisScore(newScore);
+    };
 
     if (!id) {
         return null;
@@ -68,6 +134,11 @@ const EmailViewPage = () => {
         return `${sender} <${email.sender}>`;
     };
 
+    const percentage = aiAnalysisScore !== null ? aiAnalysisScore : (scanResult ? (scanResult.result || 0) * 10 : 0);
+    const isLegitimate = aiAnalysisScore !== null ? aiAnalysisScore < 50 : (scanResult ? scanResult.legitimacy === 'Legitimate' : false);
+    const icon = isLegitimate ? <FaShieldAlt size={40} className="email-legitimate-icon" /> : <FaExclamationTriangle size={40} className="email-alert-icon" />;
+    const progressBarColor = getProgressBarColor(percentage);
+
     return (
         <div className="email-view-content">
             <button className="back-button" onClick={() => navigate('/demo')}>
@@ -75,6 +146,33 @@ const EmailViewPage = () => {
                 Back to Inbox
             </button>
             <div className="email-details">
+                {isScanning ? (
+                    <div className="scanning-message">Scanning email for phishing indicators...</div>
+                ) : scanResult && (
+                    <div className={`email-scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
+                        <div className="email-result-icon">{icon}</div>
+                        <div className="email-result-text">
+                            <span className="email-result-percentage">Risk Score: {percentage}% Phishing</span>
+                            {aiAnalysisScore !== null && (
+                                <span className="ai-analysis-note">(Updated by AI Analysis)</span>
+                            )}
+                        </div>
+                        <div className="email-progress-bar">
+                            <div
+                                className="email-progress-bar-fill"
+                                style={{ width: `${percentage}%`, backgroundColor: progressBarColor }}
+                            ></div>
+                        </div>
+                        <div className="email-result-details">
+                            {isLegitimate ? (
+                                <p>This email appears to be legitimate - No phishing indicators found.</p>
+                            ) : (
+                                <p>This email has been flagged as potentially phishing - Proceed with caution.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <h1 className="email-subject">{email.subject}</h1>
                 <div className="email-meta">
                     <div className="email-sender">
@@ -84,7 +182,23 @@ const EmailViewPage = () => {
                         <strong>Date:</strong> {new Date(email.time).toLocaleString()}
                     </div>
                 </div>
+
                 <div className="email-body" dangerouslySetInnerHTML={{ __html: email.content }} />
+
+                {email && scanResult && (
+                    <ChatBot
+                        email={{
+                            subject: email.subject || '',
+                            sender: email.sender || '',
+                            content: email.content || ''
+                        }}
+                        initialScanResult={{
+                            result: scanResult.result || 0,
+                            legitimacy: scanResult.legitimacy || 'Unknown'
+                        }}
+                        onNewAnalysis={handleNewAnalysis}
+                    />
+                )}
             </div>
         </div>
     );

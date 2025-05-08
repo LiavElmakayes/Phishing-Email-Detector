@@ -15,6 +15,7 @@
     align-items: center;
     justify-content: center;
     position: relative;
+    cursor: pointer;
 }
 
 .tab-button:hover {
@@ -35,6 +36,12 @@
     right: 0;
     height: 2px;
     background-color: #2563eb;
+}
+
+.tab-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .tab-content {
