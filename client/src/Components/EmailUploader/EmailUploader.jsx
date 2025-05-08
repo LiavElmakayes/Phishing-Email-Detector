@@ -1,4 +1,3 @@
-// EmailUploader.jsx
 import React, { useState, useRef } from 'react';
 import './EmailUploader.css';
 import { GrUpload } from "react-icons/gr";
@@ -8,6 +7,7 @@ const EmailUploader = ({ onScanResult }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showScrollPrompt, setShowScrollPrompt] = useState(false);
     const fileInputRef = useRef(null);
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
 
@@ -58,7 +58,7 @@ const EmailUploader = ({ onScanResult }) => {
             const formData = new FormData();
             formData.append('emlFile', file);
 
-            fetch('/analyze', {
+            fetch('http://localhost:5000/analyze', {
                 method: 'POST',
                 body: formData
             })
@@ -70,7 +70,13 @@ const EmailUploader = ({ onScanResult }) => {
                 })
                 .then(data => {
                     setIsLoading(false);
-                    onScanResult(data);
+                    onScanResult({
+                        ...data,
+                        filename: file.name
+                    });
+                    setShowScrollPrompt(true);
+                    // Hide the prompt after 5 seconds
+                    setTimeout(() => setShowScrollPrompt(false), 5000);
                 })
                 .catch(error => {
                     console.error('Error uploading file:', error);
@@ -83,12 +89,19 @@ const EmailUploader = ({ onScanResult }) => {
     return (
         <div>
             <div className='title-area'>
-                <h1 className='title'>Check Your Email for Phishing Threats
+                <h1
+                    className='title'>Check Your Email for Phishing Threats
                 </h1>
-                <p className='description'>Upload your suspicious email file (.eml) and we'll analyze it for potential phishing indicators.</p>
             </div>
+
             <div className="center-upload-area">
                 <div className="upload-area-container">
+                    {showScrollPrompt && (
+                        <div className="scroll-prompt">
+                            <p>Analysis complete! Scroll down to see results</p>
+                            <div className="scroll-arrow">↓</div>
+                        </div>
+                    )}
                     <div
                         className={`upload-area ${isDragging ? 'drag-active' : ''} ${isLoading ? 'loading' : ''} ${error ? 'error' : ''}`}
                         onDragEnter={handleDragEnter}
@@ -105,10 +118,11 @@ const EmailUploader = ({ onScanResult }) => {
                             </>
                         ) : (
                             <>
-                                <div className="circle">
+                                <p className='description'>Upload your suspicious email file (.eml) and we'll analyze it for potential phishing indicators.</p>
+                                {/* <div className="circle">
                                     <GrUpload size={25} className="upload-icon" />
-                                </div>
-                                <p className="first-desc">Drag or Drop the Email</p>
+                                </div> */}
+                                <p className="first-desc">Drag or Drop the Email <GrUpload size={25} className="upload-icon" /></p>
                                 <p className="second-desc">(.eml file only)</p>
                                 <input
                                     type="file"
