@@ -6,8 +6,10 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
     const [userInput, setUserInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [isActive, setIsActive] = useState(false);
+    const [chatId, setChatId] = useState(null);
 
     const startChat = async () => {
+        if (isActive) return; // Prevent multiple starts
         setIsActive(true);
         setIsTyping(true);
 
@@ -21,32 +23,21 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
                 content: email?.content || ''
             };
 
-            // Ensure initialScanResult is properly formatted
-            const scanResult = {
-                result: initialScanResult?.result || 0,
-                legitimacy: initialScanResult?.legitimacy || 'Unknown'
-            };
-
-            console.log('Formatted email data:', emailData);
-            console.log('Formatted scan result:', scanResult);
-
             const requestBody = {
                 email: emailData,
-                initialScanResult: scanResult,
+                initialScanResult: initialScanResult || {},
                 conversation: []
             };
 
             console.log('Sending request to server:', JSON.stringify(requestBody, null, 2));
 
-            const response = await fetch('http://localhost:5000/api/ai-analyze', {
+            const response = await fetch('http://localhost:5001/api/ai-analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(requestBody)
             });
-
-            console.log('Server response status:', response.status);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -62,21 +53,20 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
                 throw new Error(data.error);
             }
 
-            // Add AI's initial analysis and first question to chat
-            setMessages([{
-                role: 'assistant',
-                content: data.analysis || 'No analysis provided'
-            }]);
+            // Store the chat_id
+            setChatId(data.chat_id);
 
-            // Update the phishing score if available
-            if (data.score !== undefined) {
-                console.log('Updating phishing score:', data.score);
-                onNewAnalysis(data.score);
+            // Add only the question to the chat
+            if (data.questions) {
+                setMessages([{
+                    role: 'assistant',
+                    content: data.questions,
+                    chat_id: data.chat_id
+                }]);
             }
 
         } catch (error) {
             console.error('Error in startChat:', error);
-            console.error('Error stack:', error.stack);
             setMessages([{
                 role: 'assistant',
                 content: `Error: ${error.message}. Please try again.`
@@ -87,7 +77,7 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
     };
 
     const handleSendMessage = async () => {
-        if (!userInput.trim()) return;
+        if (!userInput.trim() || !chatId) return; // Prevent sending without chatId
 
         // Add user message to chat
         const userMessage = {
@@ -99,23 +89,20 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
         setIsTyping(true);
 
         try {
-            // Ensure email data is properly formatted
-            const emailData = {
-                subject: email?.subject || '',
-                sender: email?.sender || '',
-                content: email?.content || ''
-            };
-
-            console.log('Sending message with conversation:', [...messages, userMessage]);
-            const response = await fetch('http://localhost:5000/api/ai-analyze', {
+            const response = await fetch('http://localhost:5001/api/ai-analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    email: emailData,
+                    email: {
+                        subject: email?.subject || '',
+                        sender: email?.sender || '',
+                        content: email?.content || ''
+                    },
                     initialScanResult: initialScanResult || {},
-                    conversation: [...messages, userMessage]
+                    conversation: messages,
+                    chat_id: chatId
                 })
             });
 
@@ -132,15 +119,13 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
                 throw new Error(data.error);
             }
 
-            // Add AI response to chat
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: data.analysis
-            }]);
-
-            // Update the phishing score if available
-            if (data.score !== undefined) {
-                onNewAnalysis(data.score);
+            // Add only the question to the chat
+            if (data.questions) {
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    content: data.questions,
+                    chat_id: data.chat_id
+                }]);
             }
 
         } catch (error) {

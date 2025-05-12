@@ -36,11 +36,13 @@
     border-radius: 8px;
     max-width: 80%;
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .message.user {
     background-color: #e3f2fd;
     margin-left: auto;
+    white-space: normal;
 }
 
 .message.assistant {
@@ -51,6 +53,7 @@
 .message.typing {
     color: #666;
     font-style: italic;
+    white-space: normal;
 }
 
 .chat-input {
