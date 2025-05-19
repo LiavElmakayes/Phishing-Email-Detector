@@ -12,7 +12,6 @@ import traceback
 import time
 import json
 import requests
-from agents import EmailAgents
 from orchestrator import EmailAnalysisOrchestrator
 
 # Set up logging
@@ -39,7 +38,7 @@ CORS(app, resources={
 # OpenRouter configuration
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME", "microsoft/phi-4-reasoning-plus:free")
+MODEL_NAME = os.getenv("MODEL_NAME", "thudm/glm-z1-32b:free")
 
 # Ensure the OpenRouter API key is loaded correctly
 if not OPENROUTER_API_KEY:
@@ -69,20 +68,27 @@ def make_openrouter_request(messages, max_tokens=1000, temperature=0.7, stream=F
             }
 
         # Format the API key as a proper JWT (Bearer token)
+        # OpenRouter expects the API key to be passed as a Bearer token
         auth_token = f"Bearer {OPENROUTER_API_KEY}"
 
         headers = {
             "Authorization": auth_token,
             "Content-Type": "application/json",
             "HTTP-Referer": "http://localhost:5001",
-            "X-Title": "Phishing Detector"
+            "X-Title": "Phishing Detector",
+            "OpenAI-Organization": "org-123",  # Add organization header
+            "OpenAI-Project": "proj-123"  # Add project header
         }
 
         logger.debug(f"Making request to OpenRouter with payload: {json.dumps(payload, indent=2)}")
+        logger.debug(f"Using headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
+        logger.debug(f"Using API key: {OPENROUTER_API_KEY[:10]}...")
+        
         response = requests.post(OPENROUTER_API_URL, json=payload, headers=headers)
         
         logger.debug(f"OpenRouter API Response Status: {response.status_code}")
         logger.debug(f"OpenRouter API Response Headers: {response.headers}")
+        logger.debug(f"OpenRouter API Response Body: {response.text}")
         
         if response.status_code == 200:
             try:
@@ -97,6 +103,27 @@ def make_openrouter_request(messages, max_tokens=1000, temperature=0.7, stream=F
                         raise ValueError(f"OpenRouter rate limit exceeded. Please try again later or add credits to your account.")
                     else:
                         raise ValueError(f"OpenRouter API error: {error_msg}")
+                
+                # Validate response structure
+                if "choices" not in response_data:
+                    logger.error(f"Missing 'choices' in response: {json.dumps(response_data, indent=2)}")
+                    raise ValueError("Invalid response format from OpenRouter: missing 'choices'")
+                
+                if not response_data["choices"]:
+                    logger.error("Empty 'choices' array in response")
+                    raise ValueError("Invalid response format from OpenRouter: empty 'choices' array")
+                
+                if "message" not in response_data["choices"][0]:
+                    logger.error(f"Missing 'message' in first choice: {json.dumps(response_data['choices'][0], indent=2)}")
+                    raise ValueError("Invalid response format from OpenRouter: missing 'message' in first choice")
+                
+                if "content" not in response_data["choices"][0]["message"]:
+                    logger.error(f"Missing 'content' in message: {json.dumps(response_data['choices'][0]['message'], indent=2)}")
+                    raise ValueError("Invalid response format from OpenRouter: missing 'content' in message")
+                
+                # Log the actual content
+                content = response_data["choices"][0]["message"]["content"]
+                logger.debug(f"AI Model Content: {content}")
                         
                 return response_data
             except json.JSONDecodeError as e:
@@ -150,12 +177,8 @@ except Exception as e:
 
 # Initialize AI agents with the new request function
 try:
-    logger.info("Initializing AI agents...")
-    agents = EmailAgents(make_openrouter_request)
-    logger.info("AI agents initialized successfully")
-    
     logger.info("Initializing orchestrator...")
-    orchestrator = EmailAnalysisOrchestrator(agents)
+    orchestrator = EmailAnalysisOrchestrator(make_openrouter_request)
     logger.info("Orchestrator initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize AI components: {str(e)}")
@@ -203,6 +226,10 @@ def analyze_email():
         if not conversation:
             logger.info("=== Starting Initial Analysis ===")
             try:
+                logger.debug(f"Email data: {json.dumps(email_data, indent=2)}")
+                logger.debug(f"Chat ID: {chat_id}")
+                logger.debug(f"Initial scan result: {json.dumps(initial_scan_result, indent=2)}")
+                
                 result = orchestrator.analyze_email(email_data, chat_id, initial_scan_result)
                 
                 # Ensure questions text preserves newlines

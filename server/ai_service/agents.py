@@ -51,16 +51,29 @@ IMPORTANT RULES:
 - Use the exact emojis shown (🔎, 📧, 📨, ❓)
 - Always quote the actual text from the email
 - Focus on suspicious elements in each category
-- Ask specific, targeted questions
+- Ask specific, targeted questions based on the actual content
 - Include context before each question
 - DO NOT analyze or explain, just ask questions
 - DO NOT ask if the message is a phishing attempt
 - DO NOT use generic questions
-- Your response MUST follow this exact format with all three sections"""
+- Your response MUST follow this exact format with all three sections
+- Questions MUST be specific to the email's content and context
+- Use the actual email content to form unique questions
+- Consider the relationship between subject, sender, and content when forming questions"""
                 },
                 {
                     "role": "user",
-                    "content": f"Subject: {email_data.get('subject', '')}\nSender: {email_data.get('sender', '')}\nContent: {email_data.get('content', '')}"
+                    "content": f"""Analyze this email and generate specific questions:
+
+Subject: {email_data.get('subject', '')}
+Sender: {email_data.get('sender', '')}
+Content: {email_data.get('content', '')}
+
+Focus on:
+1. Unusual patterns in the subject line
+2. Suspicious sender information
+3. Specific content elements that seem out of place
+4. Relationships between different parts of the email"""
                 }
             ]
             
@@ -211,7 +224,11 @@ Rules:
 8. Format your response as:
    [Context with emoji]
    
-   ❓ [Your specific question]"""
+   ❓ [Your specific question]
+9. Consider the relationship between the current category and previous responses
+10. Use specific details from the email to form your question
+11. Avoid generic questions that could apply to any email
+12. Build upon the user's previous responses to create a more focused analysis"""
                 }
             ]
             
@@ -480,22 +497,92 @@ User Responses:
                 current_category = state["current_category"]
                 category_questions = all_questions[current_category]
             
-            # Get the next question
-            question = category_questions[state["current_question_index"]]
-            
-            # Add the context based on category with proper line breaks
-            if current_category == "subject":
-                context = f"🔎 \"The subject says: '{state['email_subject']}'\"\n\n"
-            elif current_category == "sender":
-                context = f"📧 \"The sender is shown as: {state['email_sender']}\"\n\n"
-            else:  # content
-                context = f"📨 \"The message contains various content elements\"\n\n"
-            
-            return context + "❓ " + question
+            # Get the next question (it already includes the context)
+            return category_questions[state["current_question_index"]]
             
         except Exception as e:
             logger.error(f"Error getting next question: {str(e)}")
-            return "❓ Can you tell me more about what makes this email seem suspicious or legitimate to you?"
+            # If we can't get the next question, try to generate a new one using AI
+            try:
+                return self._generate_ai_question(chat_id)
+            except ValueError as ve:
+                # If AI generation fails, return an error message that can be handled by the frontend
+                return "ERROR: Unable to generate a question at this time. Please try again."
+
+    def _generate_ai_question(self, chat_id: str) -> str:
+        """Generate a new question using AI."""
+        try:
+            state = self.analysis_state[chat_id]
+            current_category = state["current_category"]
+            
+            messages = [
+                {
+                    "role": "system",
+                    "content": f"""You are an email analysis expert helping users understand their emails better. Generate a specific question about the email content.
+
+Current Category: {current_category}
+Email Subject: {state['email_subject']}
+Email Sender: {state['email_sender']}
+Email Content: {state['email_content']}
+
+Rules:
+1. Generate ONE specific question about the email
+2. Focus on the current category ({current_category})
+3. Use the exact emoji for the category (🔎 for subject, 📧 for sender, 📨 for content)
+4. Make the question specific to the actual email content
+5. Help the user understand the email better
+6. Format your response as:
+   [Context with emoji]
+   
+   ❓ [Your specific question]"""
+                }
+            ]
+            
+            # First attempt with full context
+            response = self.make_request({
+                "messages": messages,
+                "model": "microsoft/phi-4-reasoning-plus:free",
+                "temperature": 0.7,
+                "max_tokens": 200,
+                "stream": False
+            })
+            
+            if response and "choices" in response and response["choices"]:
+                return response["choices"][0]["message"]["content"].strip()
+            
+            # Second attempt with simpler prompt
+            messages = [
+                {
+                    "role": "system",
+                    "content": f"""Generate a question about this email:
+
+Category: {current_category}
+Subject: {state['email_subject']}
+Sender: {state['email_sender']}
+Content: {state['email_content'][:100]}...
+
+Format: [Context with emoji] ❓ [Question]"""
+                }
+            ]
+            
+            response = self.make_request({
+                "messages": messages,
+                "model": "microsoft/phi-4-reasoning-plus:free",
+                "temperature": 0.7,
+                "max_tokens": 200,
+                "stream": False
+            })
+            
+            if response and "choices" in response and response["choices"]:
+                return response["choices"][0]["message"]["content"].strip()
+            
+            # If both attempts fail, raise an error to be handled by the caller
+            raise ValueError("Failed to generate AI question after multiple attempts")
+                
+        except Exception as e:
+            logger.error(f"Error generating AI question: {str(e)}")
+            # Instead of returning a hardcoded question, raise the error
+            raise ValueError("Unable to generate a question at this time. Please try again.")
 
     def _generate_fallback_analysis(self, email_data: Dict[str, str]) -> Dict[str, Any]:
         """Generate a fallback analysis when the API is unavailable."""
@@ -505,20 +592,94 @@ User Responses:
             content = email_data.get('content', '').strip()
             sender = email_data.get('sender', '').strip()
             
-            # Generate contextual questions based on email content
-            questions_by_category = {
-                "subject": [
-                    self._generate_subject_question(subject),
-                    "Have you received similar emails from this sender before?"
-                ],
-                "sender": [
-                    self._generate_sender_question(sender),
-                    "Does the sender's name and email address seem legitimate for this type of communication?"
-                ],
-                "content": [
-                    self._generate_content_question(content, subject),
-                    "Are there any urgent requests or threats in the email that require immediate action?"
-                ]
+            # Create a more sophisticated prompt for the AI
+            fallback_messages = [
+                {
+                    "role": "system",
+                    "content": """You are an email analysis expert helping users understand their emails better. Generate unique, context-aware questions about the email's content.
+
+Rules:
+1. Generate questions that are SPECIFIC to this email's content
+2. Focus on helping users understand the email better
+3. Consider relationships between subject, sender, and content
+4. Use the exact emojis shown (🔎 for subject, 📧 for sender, 📨 for content)
+5. Format each question with context and emoji
+6. DO NOT use generic or template questions
+7. Format your response as:
+   [Context with emoji]
+   
+   ❓ [Your specific question]"""
+                },
+                {
+                    "role": "user",
+                    "content": f"""Generate unique questions about this email:
+
+Subject: {subject}
+Sender: {sender}
+Content: {content}
+
+Focus on:
+1. Understanding the subject line
+2. Understanding the sender information
+3. Understanding the content
+4. Relationships between different parts of the email"""
+                }
+            ]
+            
+            try:
+                # Try to get questions from the AI
+                response = self.make_request({
+                    "messages": fallback_messages,
+                    "model": "microsoft/phi-4-reasoning-plus:free",
+                    "temperature": 0.7,  # Increased temperature for more creative questions
+                    "max_tokens": 500,
+                    "stream": False
+                })
+                
+                if response and "choices" in response and response["choices"]:
+                    all_questions = response["choices"][0]["message"]["content"].strip()
+                    
+                    # Extract questions by category
+                    questions_by_category = self._extract_questions_by_category(all_questions)
+                else:
+                    raise ValueError("Invalid response from AI")
+                    
+            except Exception as e:
+                logger.error(f"Error getting AI response in fallback: {str(e)}")
+                # If AI fails, try one more time with a simpler prompt
+                try:
+                    messages = [
+                        {
+                            "role": "system",
+                            "content": f"""Generate questions about this email:
+
+Subject: {subject}
+Sender: {sender}
+Content: {content[:100]}...
+
+Format: [Context with emoji] ❓ [Question]"""
+                        }
+                    ]
+                    
+                    response = self.make_request({
+                        "messages": messages,
+                        "model": "microsoft/phi-4-reasoning-plus:free",
+                        "temperature": 0.7,
+                        "max_tokens": 500,
+                        "stream": False
+                    })
+                    
+                    if response and "choices" in response and response["choices"]:
+                        all_questions = response["choices"][0]["message"]["content"].strip()
+                        questions_by_category = self._extract_questions_by_category(all_questions)
+                    else:
+                        raise ValueError("Invalid response from AI")
+                except:
+                    # If all AI attempts fail, return an error
+                    return {
+                        "questions": "ERROR: Unable to analyze the email at this time. Please try again.",
+                        "chat_id": str(uuid.uuid4()),
+                        "current_category": "subject"
             }
             
             # Generate a chat ID
@@ -550,67 +711,12 @@ User Responses:
             
         except Exception as e:
             logger.error(f"Error generating fallback analysis: {str(e)}")
+            # Return an error message instead of a hardcoded question
             return {
-                "questions": "❓ Can you tell me more about what makes this email seem suspicious or legitimate to you?",
+                "questions": "ERROR: Unable to analyze the email at this time. Please try again.",
                 "chat_id": str(uuid.uuid4()),
                 "current_category": "subject"
             }
-
-    def _generate_subject_question(self, subject: str) -> str:
-        """Generate a contextual question about the subject line."""
-        subject_lower = subject.lower()
-        
-        # Check for common phishing subject patterns
-        if any(word in subject_lower for word in ['urgent', 'immediate', 'action required', 'verify', 'verification']):
-            return "Does this urgent verification request seem legitimate for your account?"
-        elif any(word in subject_lower for word in ['suspicious', 'unusual', 'unrecognized', 'signin', 'login']):
-            return "Have you recently attempted to access your account or received similar security alerts?"
-        elif any(word in subject_lower for word in ['offer', 'promotion', 'discount', 'free', 'bonus']):
-            return "Does this promotional offer seem too good to be true or unexpected?"
-        elif any(word in subject_lower for word in ['payment', 'invoice', 'receipt', 'transaction']):
-            return "Are you expecting any payments or transactions related to this email?"
-        elif any(word in subject_lower for word in ['password', 'security', 'account', 'access']):
-            return "Have you recently requested any account changes or security updates?"
-        else:
-            return "Does this subject line match any recent actions you've taken or communications you're expecting?"
-
-    def _generate_sender_question(self, sender: str) -> str:
-        """Generate a contextual question about the sender."""
-        sender_lower = sender.lower()
-        
-        # Extract domain if present
-        domain = ""
-        if '@' in sender:
-            domain = sender.split('@')[-1].strip('>')
-        
-        # Check for common patterns
-        if 'noreply' in sender_lower or 'no-reply' in sender_lower:
-            return "Do you typically receive important communications from no-reply addresses?"
-        elif domain and any(d in domain for d in ['gmail.com', 'yahoo.com', 'hotmail.com']):
-            return "Would you expect this type of communication from a personal email domain?"
-        elif 'security' in sender_lower or 'verify' in sender_lower:
-            return "Is this the usual way you receive security notifications from this service?"
-        else:
-            return "Is this a sender you recognize or have received emails from before?"
-
-    def _generate_content_question(self, content: str, subject: str) -> str:
-        """Generate a contextual question about the email content."""
-        content_lower = content.lower()
-        subject_lower = subject.lower()
-        
-        # Check for common phishing content patterns
-        if any(word in content_lower for word in ['click here', 'verify now', 'update now', 'confirm now']):
-            return "Does the email pressure you to take immediate action?"
-        elif any(word in content_lower for word in ['password', 'username', 'account', 'login']):
-            return "Does the email ask for sensitive information like passwords or account details?"
-        elif any(word in content_lower for word in ['suspended', 'disabled', 'blocked', 'terminated']):
-            return "Have you received any prior notifications about your account status?"
-        elif any(word in content_lower for word in ['payment', 'invoice', 'transaction', 'purchase']):
-            return "Are you expecting any payments or transactions mentioned in the email?"
-        elif 'http' in content_lower or 'www.' in content_lower:
-            return "Do the links in the email point to legitimate websites you trust?"
-        else:
-            return "Does the content of the email match what you would expect from the subject line?"
 
     def _generate_fallback_conversation_response(self, chat_id: str, state: Dict[str, Any], user_message: str) -> Dict[str, Any]:
         """Generate a fallback response when the API is unavailable during conversation."""
@@ -618,36 +724,63 @@ User Responses:
             current_category = state["current_category"]
             previous_responses = state["user_responses"]
             
-            # Generate a contextual follow-up based on previous responses
-            if current_category == "subject":
-                if "no" in user_message.lower():
-                    question = f"""🔎 "The subject says: '{state['email_subject']}'"
+            # Create a prompt for generating follow-up questions
+            followup_messages = [
+                {
+                    "role": "system",
+                    "content": f"""You are a cybersecurity expert analyzing a suspicious email. Generate a specific follow-up question based on the user's previous response.
 
-❓ What specific elements in the subject line make it seem suspicious to you?"""
+Current Category: {current_category}
+Email Subject: {state['email_subject']}
+Email Sender: {state['email_sender']}
+Email Content: {state['email_content']}
+
+Previous Response: {user_message}
+
+Rules:
+1. Generate ONE specific follow-up question
+2. Focus on the current category ({current_category})
+3. Use the exact emoji for the category (🔎 for subject, 📧 for sender, 📨 for content)
+4. Make the question specific to the email content and previous response
+5. DO NOT use generic or template questions
+6. DO NOT ask if the message is a phishing attempt
+7. Format your response as:
+   [Context with emoji]
+   
+   ❓ [Your specific question]"""
+                }
+            ]
+            
+            try:
+                # Try to get a follow-up question from the AI
+                response = self.make_request({
+                    "messages": followup_messages,
+                    "model": "microsoft/phi-4-reasoning-plus:free",
+                    "temperature": 0.7,
+                    "max_tokens": 200,
+                    "stream": False
+                })
+                
+                if response and "choices" in response and response["choices"]:
+                    question = response["choices"][0]["message"]["content"].strip()
                 else:
+                    raise ValueError("Invalid response from AI")
+                    
+            except Exception as e:
+                logger.error(f"Error getting AI response in fallback conversation: {str(e)}")
+                # If AI fails, use a very basic question
+                if current_category == "subject":
                     question = f"""🔎 "The subject says: '{state['email_subject']}'"
 
-❓ Can you explain why this subject line seems legitimate to you?"""
-                    
+❓ What specific elements in the subject line seem unusual?"""
             elif current_category == "sender":
-                if "no" in user_message.lower() or "maybe" in user_message.lower():
                     question = f"""📧 "The sender is shown as: {state['email_sender']}"
 
-❓ What aspects of the sender's information seem suspicious to you?"""
-                else:
-                    question = f"""📧 "The sender is shown as: {state['email_sender']}"
-
-❓ How do you know this sender is legitimate?"""
-                    
+❓ What aspects of the sender's information seem suspicious?"""
             else:  # content
-                if "yes" in user_message.lower():
-                    question = f"""📨 "The message contains various content elements"
+                    question = f"""📨 "The message contains: {state['email_content'][:100]}..."
 
-❓ What specific urgent requests or threats did you notice in the email?"""
-                else:
-                    question = f"""📨 "The message contains various content elements"
-
-❓ What aspects of the email content seem legitimate to you?"""
+❓ What specific elements in the content seem concerning?"""
             
             # Update state
             state["current_question_index"] += 1
@@ -666,8 +799,22 @@ User Responses:
             
         except Exception as e:
             logger.error(f"Error generating fallback conversation response: {str(e)}")
+            # Even in the worst case, provide a specific question based on the current category
+            if current_category == "subject":
+                question = f"""🔎 "The subject says: '{state['email_subject']}'"
+
+❓ What specific elements in the subject line caught your attention?"""
+            elif current_category == "sender":
+                question = f"""📧 "The sender is shown as: {state['email_sender']}"
+
+❓ What aspects of the sender's information caught your attention?"""
+            else:  # content
+                question = f"""📨 "The message contains: {state['email_content'][:100]}..."
+
+❓ What specific elements in the content caught your attention?"""
+            
             return {
-                "questions": "❓ Can you tell me more about what makes this email seem suspicious or legitimate to you?",
+                "questions": question,
                 "chat_id": chat_id,
                 "current_category": state.get("current_category", "subject")
             } 
