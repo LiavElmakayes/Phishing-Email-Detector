@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, AlertCircle, File } from "lucide-react";
+import { Star, AlertCircle, File, Shield, AlertTriangle } from "lucide-react";
 import './EmailList.css';
 
 const EmailList = ({ emails, onToggleStar, onToggleImportant }) => {
@@ -22,6 +22,17 @@ const EmailList = ({ emails, onToggleStar, onToggleImportant }) => {
 
     const handleEmailClick = (email) => {
         navigate(`/demo/${email.id}`);
+    };
+
+    const getRiskIndicator = (scanResult) => {
+        const score = scanResult * 10; // Convert to percentage
+        if (score <= 25) {
+            return <Shield className="email-list-icon safe" />;
+        } else if (score <= 50) {
+            return <Shield className="email-list-icon warning" />;
+        } else {
+            return <AlertTriangle className="email-list-icon danger" />;
+        }
     };
 
     return (
@@ -64,6 +75,15 @@ const EmailList = ({ emails, onToggleStar, onToggleImportant }) => {
                                 <File className="email-list-icon" />
                             </div>
                         )}
+
+                        <div className="email-list-risk">
+                            {email.scanResult !== undefined && getRiskIndicator(email.scanResult)}
+                            <span className="email-list-risk-score">
+                                {email.scanResult !== undefined ? (
+                                    <span>{Math.round(email.scanResult * 10)}%</span>
+                                ) : 'N/A'}
+                            </span>
+                        </div>
 
                         <div className="email-list-time">
                             {email.time}

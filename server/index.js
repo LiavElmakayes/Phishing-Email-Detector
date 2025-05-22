@@ -111,6 +111,7 @@ app.get('/emails', async (req, res) => {
                 id: file,
                 sender: sender,
                 subject: parsed.subject || 'No Subject',
+                content: parsed.text || parsed.html || 'No content',
                 snippet: parsed.text?.slice(0, 100) || parsed.html?.slice(0, 100) || 'No content',
                 time: parsed.date || new Date(),
                 read: false,
@@ -167,6 +168,28 @@ app.get('/emails/:id', async (req, res) => {
         console.error('Error reading email:', error);
         res.status(500).json({
             error: 'Failed to read email',
+            details: error.message
+        });
+    }
+});
+
+// New endpoint to get raw .eml file
+app.get('/emails/:id/raw', (req, res) => {
+    try {
+        const emailId = req.params.id;
+        const emlPath = path.join(__dirname, 'emails', emailId);
+
+        if (!fs.existsSync(emlPath)) {
+            console.error('Email file not found:', emlPath);
+            return res.status(404).json({ error: 'Email not found' });
+        }
+
+        // Send the raw .eml file
+        res.sendFile(emlPath);
+    } catch (error) {
+        console.error('Error reading email file:', error);
+        res.status(500).json({
+            error: 'Failed to read email file',
             details: error.message
         });
     }
@@ -289,7 +312,11 @@ app.post('/analyze-content', async (req, res) => {
         // Try to use spamassassin first
         exec(`spamassassin < "${tempFilePath}"`, (error, stdout, stderr) => {
             // Clean up the temporary file
-            fs.unlinkSync(tempFilePath);
+            try {
+                fs.unlinkSync(tempFilePath);
+            } catch (err) {
+                console.error('Error deleting temp file:', err);
+            }
 
             if (error) {
                 console.error('SpamAssassin error:', error);

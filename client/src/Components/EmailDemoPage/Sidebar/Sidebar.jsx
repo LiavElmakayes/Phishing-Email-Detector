@@ -18,7 +18,7 @@ const Sidebar = () => {
             {/* Gmail Logo */}
             <div className="logo-container">
                 <Mail className="logo-icon" />
-                <span className="logo-text">Gmail</span>
+                <span className="logo-text">GmaiLY</span>
             </div>
 
             {/* Compose Button */}

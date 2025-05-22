@@ -26,7 +26,33 @@ const EmailViewPage = () => {
                 const data = await response.json();
                 console.log('Received email data:', data);
                 setEmail(data);
-                // Automatically scan the email when it's loaded
+
+                // Try to get cached scan result first
+                const cachedEmails = localStorage.getItem('cachedEmails');
+                if (cachedEmails) {
+                    const emails = JSON.parse(cachedEmails);
+                    const cachedEmail = emails.find(e => e.id === id);
+                    if (cachedEmail) {
+                        console.log('Found cached email:', cachedEmail);
+                        // Handle both formats of scan results
+                        if (typeof cachedEmail.scanResult === 'number') {
+                            // Convert number format to object format
+                            const result = {
+                                result: cachedEmail.scanResult,
+                                legitimacy: cachedEmail.legitimacy || (cachedEmail.scanResult >= 5.0 ? 'Phishing' : 'Legitimate')
+                            };
+                            console.log('Using converted cached scan result:', result);
+                            setScanResult(result);
+                        } else if (cachedEmail.scanResult && typeof cachedEmail.scanResult === 'object') {
+                            console.log('Using cached scan result object:', cachedEmail.scanResult);
+                            setScanResult(cachedEmail.scanResult);
+                        }
+                        return;
+                    }
+                }
+
+                // If no cached result found, scan the email
+                console.log('No cached scan result found, scanning email...');
                 scanEmail(data);
             } catch (err) {
                 console.error('Error fetching email:', err);
