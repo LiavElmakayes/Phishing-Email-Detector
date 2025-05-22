@@ -1,251 +1,318 @@
+"""
+Main Flask application for the email analysis service.
+Handles HTTP endpoints and coordinates the AI analysis workflow.
+"""
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import autogen
 import os
 from dotenv import load_dotenv
-import re
+import logging
 import traceback
+import time
 import json
+import requests
+from orchestrator import EmailAnalysisOrchestrator
 
+# Set up logging
+logging.basicConfig(level=logging.DEBUG,
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Load environment variables
 load_dotenv()
 
+# Initialize Flask app
 app = Flask(__name__)
-CORS(app)
 
-# Configure the AI agents with OpenRouter using OpenAI format
-config_list = [
-    {
-        'model': 'microsoft/phi-4-reasoning-plus:free',
-        'api_key': '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',
-        'base_url': 'https://openrouter.ai/api/v1',
-        'api_type': 'openai',
-        'price': [0.0, 0.0]  # Add price configuration to avoid the warning
+# Configure CORS
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5000", "http://localhost:3000", "http://127.0.0.1:5000", "http://127.0.0.1:3000", "http://host.docker.internal:5000", "http://host.docker.internal:3000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
     }
-]
+})
 
-print("\n=== Autogen Configuration ===")
-print("Config list:", json.dumps(config_list, indent=2))
+# OpenRouter configuration
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+MODEL_NAME = os.getenv("MODEL_NAME", "thudm/glm-z1-32b:free")
 
-# Create the agents
+# Ensure the OpenRouter API key is loaded correctly
+if not OPENROUTER_API_KEY:
+    logger.error("OPENROUTER_API_KEY is missing. Please check your .env file.")
+    raise ValueError("Missing OpenRouter API key. Please set the OPENROUTER_API_KEY environment variable.")
+
+if not OPENROUTER_API_KEY.startswith("sk-or-v1-"):
+    logger.error(f"Invalid OpenRouter API key format: {OPENROUTER_API_KEY[:8]}...")
+    raise ValueError("Invalid OpenRouter API key format. API key should start with 'sk-or-v1-'")
+
+logger.info(f"API key starts with: {OPENROUTER_API_KEY[:10]}...")
+
+def make_openrouter_request(messages, max_tokens=1000, temperature=0.7, stream=False):
+    """Make a request to OpenRouter API."""
+    try:
+        # If messages is already a complete payload, use it directly
+        if isinstance(messages, dict) and "messages" in messages:
+            payload = messages
+        else:
+            # Otherwise construct the payload
+            payload = {
+                "model": MODEL_NAME,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": stream
+            }
+
+        # Format the API key as a proper JWT (Bearer token)
+        # OpenRouter expects the API key to be passed as a Bearer token
+        auth_token = f"Bearer {OPENROUTER_API_KEY}"
+
+        headers = {
+            "Authorization": auth_token,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:5001",
+            "X-Title": "Phishing Detector",
+            "OpenAI-Organization": "org-123",  # Add organization header
+            "OpenAI-Project": "proj-123"  # Add project header
+        }
+
+        logger.debug(f"Making request to OpenRouter with payload: {json.dumps(payload, indent=2)}")
+        logger.debug(f"Using headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
+        logger.debug(f"Using API key: {OPENROUTER_API_KEY[:10]}...")
+        
+        response = requests.post(OPENROUTER_API_URL, json=payload, headers=headers)
+        
+        logger.debug(f"OpenRouter API Response Status: {response.status_code}")
+        logger.debug(f"OpenRouter API Response Headers: {response.headers}")
+        logger.debug(f"OpenRouter API Response Body: {response.text}")
+        
+        if response.status_code == 200:
+            try:
+                response_data = response.json()
+                logger.debug(f"Parsed OpenRouter Response: {json.dumps(response_data, indent=2)}")
+                
+                # Check for rate limit error in successful response
+                if "error" in response_data:
+                    error_msg = response_data["error"].get("message", "Unknown error")
+                    if "Rate limit exceeded" in error_msg:
+                        logger.error(f"Rate limit exceeded: {error_msg}")
+                        raise ValueError(f"OpenRouter rate limit exceeded. Please try again later or add credits to your account.")
+                    else:
+                        raise ValueError(f"OpenRouter API error: {error_msg}")
+                
+                # Validate response structure
+                if "choices" not in response_data:
+                    logger.error(f"Missing 'choices' in response: {json.dumps(response_data, indent=2)}")
+                    raise ValueError("Invalid response format from OpenRouter: missing 'choices'")
+                
+                if not response_data["choices"]:
+                    logger.error("Empty 'choices' array in response")
+                    raise ValueError("Invalid response format from OpenRouter: empty 'choices' array")
+                
+                if "message" not in response_data["choices"][0]:
+                    logger.error(f"Missing 'message' in first choice: {json.dumps(response_data['choices'][0], indent=2)}")
+                    raise ValueError("Invalid response format from OpenRouter: missing 'message' in first choice")
+                
+                if "content" not in response_data["choices"][0]["message"]:
+                    logger.error(f"Missing 'content' in message: {json.dumps(response_data['choices'][0]['message'], indent=2)}")
+                    raise ValueError("Invalid response format from OpenRouter: missing 'content' in message")
+                
+                # Log the actual content
+                content = response_data["choices"][0]["message"]["content"]
+                logger.debug(f"AI Model Content: {content}")
+                        
+                return response_data
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON Parse Error: {str(e)}")
+                logger.error(f"Raw Response: {response.text}")
+                raise ValueError(f"Failed to parse OpenRouter API response: {str(e)}")
+        elif response.status_code == 429:
+            logger.error("Rate limit exceeded")
+            raise ValueError("OpenRouter rate limit exceeded. Please try again later or add credits to your account.")
+        else:
+            logger.error(f"Error from OpenRouter API: {response.text}")
+            raise ValueError(f"OpenRouter API request failed with status {response.status_code}: {response.text}")
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Network error making OpenRouter request: {str(e)}")
+        raise ValueError(f"Network error connecting to OpenRouter: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error making OpenRouter request: {str(e)}")
+        logger.error(f"Error traceback: {traceback.format_exc()}")
+        raise
+
+# Test OpenRouter connection
 try:
-    print("\n=== Creating Assistant Agent ===")
-    assistant = autogen.AssistantAgent(
-        name="assistant",
-        llm_config={
-            "config_list": config_list,
-            "temperature": 0.7,
-        },
-        system_message="""You are a phishing email analysis assistant. Your role is to:
-        1. First, thoroughly analyze the email content, including:
-           - Sender information and domain
-           - Email subject and content
-           - Any links or attachments
-           - Language and tone used
-           - Any suspicious patterns or indicators
-        2. Based on your analysis, identify specific concerns or suspicious elements
-        3. Ask ONE specific question at a time about the most suspicious element you found
-        4. Wait for the user's response
-        5. Analyze their response and either:
-           - Ask a follow-up question about the same element if needed
-           - Move on to the next suspicious element
-        6. Continue this process until you have gathered enough information
-        7. Provide a final analysis with a phishing score
+    logger.info("Testing OpenRouter connection...")
+    test_response = make_openrouter_request([
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Say hello briefly."}
+    ], max_tokens=10)
+    
+    if test_response and "choices" in test_response and len(test_response["choices"]) > 0:
+        content = test_response["choices"][0]["message"]["content"]
+        logger.info(f"OpenRouter test response: {content}")
+        logger.info("OpenRouter connection test successful!")
+    else:
+        raise ValueError("Invalid response format from OpenRouter")
         
-        IMPORTANT:
-        - NEVER ask multiple questions at once
-        - NEVER ask generic questions like "Is the sender familiar?" or "Were you expecting this email?"
-        - ALWAYS ask specific questions based on what you found in the email
-        - ALWAYS wait for the user's response before asking the next question
-        - ALWAYS analyze the user's response before deciding what to ask next
-        
-        Example of a good specific question:
-        "I noticed the sender's email domain is 'paypal-security.com' which is different from PayPal's official domain. Have you ever received emails from this domain before?"
-        
-        Example of a bad generic question:
-        "Is the sender familiar to you?" or "Were you expecting this email?" """
-    )
-    print("Assistant agent created successfully")
-
-    print("\n=== Creating User Proxy Agent ===")
-    user_proxy = autogen.UserProxyAgent(
-        name="user_proxy",
-        human_input_mode="NEVER",
-        max_consecutive_auto_reply=10,
-        code_execution_config={"work_dir": "coding", "use_docker": False},
-        llm_config={"config_list": config_list}
-    )
-    print("User proxy agent created successfully")
-
-    print("\n=== Creating Phishing Analyst Agent ===")
-    phishing_analyst = autogen.AssistantAgent(
-        name="phishing_analyst",
-        llm_config={
-            "config_list": config_list,
-            "temperature": 0.7,
-        },
-        system_message="""You are a specialized phishing email analyst. Your task is to:
-        1. Analyze email content for phishing indicators
-        2. Evaluate sender information and domain authenticity
-        3. Check for suspicious links or attachments
-        4. Assess the urgency and pressure tactics
-        5. Provide a detailed risk assessment
-        6. Calculate a phishing score (0-100%)
-        7. Give specific recommendations
-        
-        Always include the phrase "new phishing score: X%" in your final response."""
-    )
-    print("Phishing analyst agent created successfully")
-
+except ValueError as e:
+    if "rate limit exceeded" in str(e).lower():
+        logger.error("Rate limit exceeded during connection test")
+        print("\n⚠️ OpenRouter rate limit exceeded. You have two options:")
+        print("1. Wait until your rate limit resets")
+        print("2. Add credits to your OpenRouter account to increase your rate limit")
+        print("\nFor now, you can still run the service, but it may fail if the rate limit is still exceeded.")
+    else:
+        logger.error(f"Failed to initialize OpenRouter connection: {str(e)}")
+        raise
 except Exception as e:
-    print("\n=== Error Creating Agents ===")
-    print(f"Error: {str(e)}")
-    print("Traceback:", traceback.format_exc())
+    logger.error(f"Failed to initialize OpenRouter connection: {str(e)}")
+    logger.error(f"Error traceback: {traceback.format_exc()}")
     raise
 
-@app.route('/analyze', methods=['POST'])
+# Initialize AI agents with the new request function
+try:
+    logger.info("Initializing orchestrator...")
+    orchestrator = EmailAnalysisOrchestrator(make_openrouter_request)
+    logger.info("Orchestrator initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize AI components: {str(e)}")
+    logger.error(f"Error traceback: {traceback.format_exc()}")
+    raise
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint."""
+    return jsonify({"status": "healthy", "message": "AI service is running"}), 200
+
+@app.route('/api/ai-analyze', methods=['POST'])
 def analyze_email():
+    """Main endpoint for email analysis."""
     try:
-        print("\n=== Python Service: Received request ===")
-        print("Raw request data:", request.json)
+        logger.info("=== Starting Email Analysis ===")
+        logger.info(f"Request data: {json.dumps(request.json, indent=2)}")
         
+        # Validate request
         if not request.json:
-            raise ValueError("No JSON data received")
+            logger.error("No JSON data received")
+            return jsonify({
+                "error": "No JSON data received",
+                "questions": "Please provide email data in JSON format",
+                "score": None
+            }), 400
             
         data = request.json
         email_data = data.get('email', {})
         
-        print("\n=== Email Data ===")
-        print("Raw email data:", email_data)
-        
         # Validate email data
-        if not email_data:
-            raise ValueError("No email data provided")
-            
-        # Ensure all required fields are present
-        required_fields = ['subject', 'sender', 'content']
-        for field in required_fields:
-            if field not in email_data:
-                print(f"Missing field {field}, setting to empty string")
-                email_data[field] = ''
-                
-        print("Validated email data:", email_data)
-                
-        initial_scan = data.get('initialScanResult', {})
-        print("\n=== Initial Scan Result ===")
-        print("Raw initial scan:", initial_scan)
+        if not email_data.get('subject') or not email_data.get('content'):
+            logger.error("Missing required email fields")
+            return jsonify({
+                "error": "Missing required email fields",
+                "questions": "Please provide both subject and content",
+                "score": None
+            }), 400
+
+        conversation = data.get('conversation', [])
+        chat_id = data.get('chat_id')
+        initial_scan_result = data.get('initialScanResult', {})
         
-        if not isinstance(initial_scan, dict):
-            print("Initial scan is not a dict, converting to empty dict")
-            initial_scan = {}
-            
-        # Ensure initial_scan has required fields
-        initial_scan = {
-            'result': initial_scan.get('result', 0),
-            'legitimacy': initial_scan.get('legitimacy', 'Unknown')
-        }
-        print("Validated initial scan:", initial_scan)
-        
-        conversation = data.get('conversation', []) or []
-        print("\n=== Conversation ===")
-        print("Raw conversation:", conversation)
-        print("Validated conversation:", conversation)
-
-        # Prepare the context for the AI
-        context = f"""
-        Email Analysis Context:
-        Subject: {email_data.get('subject', '')}
-        Sender: {email_data.get('sender', '')}
-        Content: {email_data.get('content', '')}
-        
-        Initial Scan Result: {initial_scan}
-        """
-
-        print("\n=== AI Context ===")
-        print("Prepared context:", context)
-
-        # Format conversation history for the AI
-        formatted_conversation = ""
-        if conversation:  # Only format if we have conversation history
-            for msg in conversation:
-                if isinstance(msg, dict) and 'role' in msg and 'content' in msg:
-                    formatted_conversation += f"{msg['role'].capitalize()}: {msg['content']}\n"
-                else:
-                    print(f"Invalid message format: {msg}")
-
-        print("\n=== Formatted Conversation ===")
-        print("Formatted conversation:", formatted_conversation)
-
-        # If this is the first message (empty conversation)
+        # Handle initial analysis or continue conversation
         if not conversation:
-            print("\n=== Starting Initial Analysis ===")
+            logger.info("=== Starting Initial Analysis ===")
             try:
-                print("Initiating chat with assistant...")
-                # First analyze the email thoroughly
-                user_proxy.initiate_chat(
-                    assistant,
-                    message=f"""
-                    Please analyze this email thoroughly and identify the most suspicious element.
-                    Consider the initial scan result.
-                    
-                    {context}
-                    
-                    Your task is to:
-                    1. Analyze the email content, including:
-                       - Sender information and domain
-                       - Email subject and content
-                       - Any links or attachments
-                       - Language and tone used
-                       - Any suspicious patterns or indicators
-                    2. Identify the most suspicious element
-                    3. Formulate ONE specific question about that element
-                    
-                    IMPORTANT:
-                    - DO NOT ask multiple questions
-                    - DO NOT ask generic questions like "Is the sender familiar?" or "Were you expecting this email?"
-                    - Ask a specific question based on what you found in the email
-                    """
-                )
-                print("Chat initiated successfully")
+                logger.debug(f"Email data: {json.dumps(email_data, indent=2)}")
+                logger.debug(f"Chat ID: {chat_id}")
+                logger.debug(f"Initial scan result: {json.dumps(initial_scan_result, indent=2)}")
+                
+                result = orchestrator.analyze_email(email_data, chat_id, initial_scan_result)
+                
+                # Ensure questions text preserves newlines
+                if isinstance(result.get('questions'), str):
+                    # Replace any literal \n with actual newlines
+                    result['questions'] = result['questions'].replace('\\n', '\n')
+                    # Ensure double newlines between sections
+                    result['questions'] = result['questions'].replace('\n\n\n', '\n\n')
+                
+                logger.info(f"Analysis result: {json.dumps(result, indent=2)}")
+                
+                response = jsonify(result)
+                response.headers['Content-Type'] = 'application/json; charset=utf-8'
+                return response
+                
             except Exception as e:
-                print(f"Error in initiate_chat: {str(e)}")
-                print("Error traceback:", traceback.format_exc())
-                raise
-
-        print("\n=== Getting Last Message ===")
-        try:
-            last_message = assistant.last_message()
-            if not last_message or not isinstance(last_message, dict) or "content" not in last_message:
-                raise ValueError("Invalid last message format")
-            last_message_content = last_message["content"]
-            print("Last message:", last_message_content)
-        except Exception as e:
-            print(f"Error getting last message: {str(e)}")
-            print("Error traceback:", traceback.format_exc())
-            raise
-        
-        # Extract the phishing score
-        score_match = re.search(r"new phishing score: (\d+)%", last_message_content, re.IGNORECASE)
-        score = int(score_match.group(1)) if score_match else None
-        print("\n=== Phishing Score ===")
-        print("Extracted score:", score)
-
-        response = {
-            "analysis": last_message_content,
-            "score": score
-        }
-        print("\n=== Sending Response ===")
-        print("Response:", response)
-        return jsonify(response)
-
+                logger.error(f"Error in initial analysis: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return jsonify({
+                    "error": "Failed to perform initial analysis",
+                    "error_details": str(e),
+                    "questions": "I'm having trouble analyzing this email. Please try again.",
+                    "score": None,
+                    "chat_id": chat_id
+                }), 500
+        else:
+            logger.info("=== Continuing Conversation ===")
+            try:
+                # Get the last user message
+                last_user_message = conversation[-1].get('content', '') if conversation else ''
+                
+                # Convert conversation to summary format
+                conversation_summary = []
+                for i in range(0, len(conversation), 2):
+                    if i + 1 < len(conversation):
+                        if conversation[i].get('role') == 'assistant' and conversation[i+1].get('role') == 'user':
+                            conversation_summary.append({
+                                "question": conversation[i]["content"],
+                                "answer": conversation[i+1]["content"]
+                            })
+                
+                result = orchestrator.continue_conversation(
+                    chat_id,
+                    last_user_message,
+                    conversation_summary
+                )
+                
+                # Ensure questions text preserves newlines
+                if isinstance(result.get('question'), str):
+                    # Replace any literal \n with actual newlines
+                    result['question'] = result['question'].replace('\\n', '\n')
+                    # Ensure double newlines between sections
+                    result['question'] = result['question'].replace('\n\n\n', '\n\n')
+                
+                logger.info(f"Conversation result: {json.dumps(result, indent=2)}")
+                
+                response = jsonify(result)
+                response.headers['Content-Type'] = 'application/json; charset=utf-8'
+                return response
+                
+            except Exception as e:
+                logger.error(f"Error in conversation continuation: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                return jsonify({
+                    "error": "Failed to continue conversation",
+                    "error_details": str(e),
+                    "question": "I'm having trouble processing your response. Please try again.",
+                    "score": None,
+                    "chat_id": chat_id
+                }), 500
+                
     except Exception as e:
-        print("\n=== Error in analyze_email ===")
-        print(f"Error: {str(e)}")
-        print("Traceback:", traceback.format_exc())
+        logger.error(f"Unexpected error in analyze_email: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({
-            "error": "Failed to analyze email with AI",
-            "details": str(e),
-            "traceback": traceback.format_exc()
+            "error": "Internal server error",
+            "error_details": str(e),
+            "questions": "An unexpected error occurred. Please try again.",
+            "score": None
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001) 
+    port = int(os.getenv('PORT', 5001))
+    host = os.getenv('HOST', '0.0.0.0')
+    logger.info(f"Starting AI service on {host}:{port}")
+    app.run(host=host, port=port, debug=True) 

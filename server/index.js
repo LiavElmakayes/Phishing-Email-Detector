@@ -16,6 +16,56 @@ app.use(express.json());
 // Set up multer to handle file uploads
 const upload = multer({ dest: 'uploads/' });
 
+// Custom retry function
+const retryRequest = async (url, data, options, maxRetries = 3) => {
+    let lastError;
+
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            console.log(`=== Attempt ${i + 1} to connect to AI service ===`);
+            console.log(`URL: ${url}`);
+            console.log('Request data:', JSON.stringify(data, null, 2));
+            console.log('Request options:', JSON.stringify(options, null, 2));
+
+            const response = await axios.post(url, data, {
+                ...options,
+                timeout: 30000, // 30 second timeout
+                validateStatus: function (status) {
+                    return status >= 200 && status < 500; // Accept all responses except 500+
+                }
+            });
+            console.log(`=== Attempt ${i + 1} successful ===`);
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            console.log('Response data:', JSON.stringify(response.data, null, 2));
+            return response;
+        } catch (error) {
+            lastError = error;
+            console.error(`=== Attempt ${i + 1} failed ===`);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error code:', error.code);
+            console.error('Error stack:', error.stack);
+            console.error('Error details:', {
+                code: error.code,
+                response: error.response?.data,
+                status: error.response?.status,
+                headers: error.response?.headers
+            });
+
+            if (i < maxRetries - 1) {
+                const delay = Math.pow(2, i) * 2000;
+                console.log(`Waiting ${delay}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+
+    console.error('=== All retry attempts failed ===');
+    console.error('Last error:', lastError);
+    throw lastError;
+};
+
 // Function to format sender information
 const formatSender = (parsed) => {
     if (!parsed.from) return 'Unknown Sender';
@@ -61,6 +111,7 @@ app.get('/emails', async (req, res) => {
                 id: file,
                 sender: sender,
                 subject: parsed.subject || 'No Subject',
+                content: parsed.text || parsed.html || 'No content',
                 snippet: parsed.text?.slice(0, 100) || parsed.html?.slice(0, 100) || 'No content',
                 time: parsed.date || new Date(),
                 read: false,
@@ -122,6 +173,28 @@ app.get('/emails/:id', async (req, res) => {
     }
 });
 
+// New endpoint to get raw .eml file
+app.get('/emails/:id/raw', (req, res) => {
+    try {
+        const emailId = req.params.id;
+        const emlPath = path.join(__dirname, 'emails', emailId);
+
+        if (!fs.existsSync(emlPath)) {
+            console.error('Email file not found:', emlPath);
+            return res.status(404).json({ error: 'Email not found' });
+        }
+
+        // Send the raw .eml file
+        res.sendFile(emlPath);
+    } catch (error) {
+        console.error('Error reading email file:', error);
+        res.status(500).json({
+            error: 'Failed to read email file',
+            details: error.message
+        });
+    }
+});
+
 app.post('/analyze', upload.single('emlFile'), (req, res) => {
     // Ensure the file path is in WSL-compatible format with forward slashes
     const filePath = path.join(__dirname, req.file.path).replace(/\\/g, '/');
@@ -165,10 +238,64 @@ const parseSpamassassinResult = (stdout) => {
     return { result: null, legitimacy: 'Phishing' };
 };
 
+// Function to analyze email content for phishing indicators (fallback)
+const analyzeEmailContent = (subject, content, sender) => {
+    let score = 0;
+    const indicators = [];
+
+    // Check for urgency in subject
+    const urgencyWords = ['urgent', 'immediate', 'action required', 'verify', 'confirm', 'account', 'security'];
+    if (urgencyWords.some(word => subject.toLowerCase().includes(word))) {
+        score += 2;
+        indicators.push('Urgency in subject line');
+    }
+
+    // Check for suspicious sender
+    if (!sender.includes('@') || sender.includes('suspicious') || sender.includes('verify')) {
+        score += 3;
+        indicators.push('Suspicious sender address');
+    }
+
+    // Check for suspicious links
+    const linkRegex = /https?:\/\/[^\s<>"]+|www\.[^\s<>"]+/g;
+    const links = content.match(linkRegex) || [];
+    const suspiciousDomains = ['verify', 'confirm', 'secure', 'account', 'login'];
+    const suspiciousLinks = links.filter(link =>
+        suspiciousDomains.some(domain => link.toLowerCase().includes(domain))
+    );
+    if (suspiciousLinks.length > 0) {
+        score += 2;
+        indicators.push('Suspicious links detected');
+    }
+
+    // Check for poor grammar/spelling
+    const grammarIssues = content.match(/[A-Z]{2,}/g) || [];
+    if (grammarIssues.length > 3) {
+        score += 1;
+        indicators.push('Poor grammar/spelling');
+    }
+
+    // Normalize score to 0-1 range
+    const normalizedScore = Math.min(score / 8, 1);
+
+    return {
+        result: normalizedScore,
+        legitimacy: normalizedScore > 0.5 ? 'Phishing' : 'Legitimate',
+        indicators: indicators
+    };
+};
+
 // New endpoint for analyzing email content directly
 app.post('/analyze-content', async (req, res) => {
     try {
         const { subject, content, sender } = req.body;
+
+        if (!subject || !content || !sender) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                details: 'Subject, content, and sender are required'
+            });
+        }
 
         // Create a temporary file with the email content
         const tempFilePath = path.join(__dirname, 'temp', `${Date.now()}.eml`);
@@ -182,26 +309,39 @@ app.post('/analyze-content', async (req, res) => {
         // Write the content to a temporary file
         fs.writeFileSync(tempFilePath, emailContent);
 
-        // Use spamassassin to analyze the content
+        // Try to use spamassassin first
         exec(`spamassassin < "${tempFilePath}"`, (error, stdout, stderr) => {
             // Clean up the temporary file
-            fs.unlinkSync(tempFilePath);
+            try {
+                fs.unlinkSync(tempFilePath);
+            } catch (err) {
+                console.error('Error deleting temp file:', err);
+            }
 
             if (error) {
                 console.error('SpamAssassin error:', error);
-                return res.status(500).json({ error: stderr });
+                console.log('Falling back to basic analysis...');
+
+                // Fall back to basic analysis if spamassassin fails
+                const result = analyzeEmailContent(subject, content, sender);
+                console.log('Basic analysis result:', result);
+                return res.json(result);
             }
 
             const result = parseSpamassassinResult(stdout);
+            console.log('SpamAssassin result:', result);
             res.json(result);
         });
     } catch (error) {
         console.error('Error analyzing content:', error);
-        res.status(500).json({ error: 'Failed to analyze email content' });
+        // Fall back to basic analysis if anything fails
+        const result = analyzeEmailContent(req.body.subject, req.body.content, req.body.sender);
+        console.log('Fallback analysis result:', result);
+        res.json(result);
     }
 });
 
-// Add this new endpoint
+// Update the axios request in the /api/ai-analyze endpoint
 app.post('/api/ai-analyze', async (req, res) => {
     try {
         console.log('=== Node.js Server: Received AI analysis request ===');
@@ -251,7 +391,17 @@ app.post('/api/ai-analyze', async (req, res) => {
         console.log('Request data:', JSON.stringify(requestData, null, 2));
 
         try {
-            const response = await axios.post('http://localhost:5001/analyze', requestData);
+            const response = await retryRequest(
+                'http://192.168.1.113:5001/analyze',  // Using the Windows host IP address
+                requestData,
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 30000 // 30 second timeout
+                }
+            );
+
             console.log('=== Received response from Python service ===');
             console.log('Response status:', response.status);
             console.log('Response data:', JSON.stringify(response.data, null, 2));
@@ -277,7 +427,8 @@ app.post('/api/ai-analyze', async (req, res) => {
                 // Handle connection errors
                 res.status(500).json({
                     error: 'Failed to connect to AI service',
-                    details: axiosError.message
+                    details: axiosError.message,
+                    code: axiosError.code
                 });
             }
         }

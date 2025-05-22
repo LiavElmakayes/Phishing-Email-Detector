@@ -5,7 +5,6 @@ import EmailUploader from './Components/EmailUploader/EmailUploader';
 import ScanResult from './Components/ScanResult/ScanResult';
 import ChatbotPopup from './Components/ChatbotPopup/ChatbotPopup';
 import EmailDemoPage from './Components/EmailDemoPage/EmailDemoPage';
-import EmailViewPage from './Components/EmailDemoPage/EmailViewPage/EmailViewPage';
 import './App.css';
 import NavBar from './Components/NavBar/NavBar';
 import Footer from './Components/Footer/Footer';
