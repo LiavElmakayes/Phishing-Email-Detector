@@ -1,20 +1,25 @@
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
 const { exec } = require('child_process');
 const { simpleParser } = require('mailparser');
 const axios = require('axios');
+const chatbotRouter = require('./chatbot');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
 // Set up multer to handle file uploads
 const upload = multer({ dest: 'uploads/' });
+
+// Use the chatbot router
+app.use('/api', chatbotRouter);
 
 // Custom retry function
 const retryRequest = async (url, data, options, maxRetries = 3) => {

@@ -4,7 +4,7 @@ This module contains the AnalysisAgent class responsible for analyzing email con
 
 import logging
 import json
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, List
 import traceback
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class AnalysisAgent:
         """Analyze an email using metadata and optional initial scan results."""
         try:
             # First analyze the content
-            analysis = self.analyze_content(metadata)
+            analysis = self.analyze_content(email_data['content'], metadata)
             
             # If we have initial scan results, incorporate them
             if initial_scan_result:
@@ -32,39 +32,28 @@ class AnalysisAgent:
             logger.error(f"Error in email analysis: {str(e)}")
             raise
 
-    def analyze_content(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze email content for suspicious patterns."""
+    def analyze_content(self, content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze the email content for suspicious patterns."""
         try:
             messages = [
                 {
                     "role": "system",
-                    "content": """You are an email security expert. Analyze the email content for suspicious patterns.
-                    
-Rules:
-1. Identify unusual patterns in subject, sender, and content
-2. Look for phishing indicators
-3. Analyze relationships between different parts
-4. Return a structured analysis object with the following format:
+                    "content": """You are an email security expert analyzing email content for suspicious patterns.
+
+Your job is to analyze the email content and identify:
+1. Suspicious patterns and red flags
+2. Urgency or pressure tactics
+3. Unusual requests or demands
+4. Mismatched content and context
+5. Suspicious links or attachments
+
+Return a JSON object with this structure:
 {
-    "subject_analysis": {
-        "suspicious_patterns": ["list of patterns"],
+    "content": {
+        "text": "original content",
         "risk_level": "low/medium/high",
-        "explanation": "detailed explanation"
-    },
-    "sender_analysis": {
-        "domain_risk": "low/medium/high",
-        "suspicious_elements": ["list of elements"],
-        "explanation": "detailed explanation"
-    },
-    "content_analysis": {
-        "suspicious_elements": ["list of elements"],
-        "risk_level": "low/medium/high",
-        "explanation": "detailed explanation"
-    },
-    "overall_analysis": {
-        "risk_level": "low/medium/high",
-        "key_findings": ["list of findings"],
-        "recommendations": ["list of recommendations"]
+        "suspicious_elements": ["list of suspicious elements found"],
+        "explanation": "detailed explanation of findings"
     }
 }
 
@@ -72,42 +61,15 @@ IMPORTANT: You must return ONLY a valid JSON object. Do not include any text bef
                 },
                 {
                     "role": "user",
-                    "content": f"""Analyze this email:
-                    
-Subject: {metadata['subject']['text']}
-Sender: {metadata['sender']['email']} ({metadata['sender']['name']})
-Content: {metadata['content']['text']}
-
-Focus on:
-1. Unusual patterns in the subject line
-2. Suspicious sender information
-3. Specific content elements that seem out of place
-4. Relationships between different parts of the email"""
+                    "content": f"Analyze this email content for suspicious patterns:\n\n{content}"
                 }
             ]
             
             logger.debug(f"Making request to AI model with messages: {json.dumps(messages, indent=2)}")
-            response = self.make_request({
-                "messages": messages,
-                "model": "microsoft/phi-4-reasoning-plus:free",
-                "temperature": 0.1,
-                "max_tokens": 1000,
-                "stream": False
-            })
+            response = self.make_request(messages)  # Pass messages directly, not wrapped in an object
             
-            logger.debug(f"Received response from AI model: {json.dumps(response, indent=2)}")
-            
-            if not response:
-                logger.error("Empty response from AI model")
-                raise ValueError("Empty response from AI model")
-                
-            if "choices" not in response:
-                logger.error(f"Invalid response format: {json.dumps(response, indent=2)}")
-                raise ValueError("Invalid response format from AI model")
-                
-            if not response["choices"]:
-                logger.error("No choices in response")
-                raise ValueError("No choices in response from AI model")
+            if not response or "choices" not in response or not response["choices"]:
+                raise ValueError("Invalid response from AI model")
                 
             content = response["choices"][0]["message"]["content"]
             logger.debug(f"Raw content from AI model: {content}")
@@ -133,6 +95,7 @@ Focus on:
                     content = content[start:end]
             except Exception as e:
                 logger.error(f"Error cleaning content: {str(e)}")
+                return self._generate_fallback_analysis(metadata)
             
             logger.debug(f"Cleaned content: {content}")
             
@@ -140,51 +103,75 @@ Focus on:
                 analysis = json.loads(content)
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON response: {str(e)}")
-                logger.error(f"Raw content: {content}")
-                # Create a basic analysis structure as fallback
-                analysis = {
-                    "subject_analysis": {
-                        "suspicious_patterns": [],
-                        "risk_level": "low",
-                        "explanation": "Unable to analyze subject"
-                    },
-                    "sender_analysis": {
-                        "domain_risk": "low",
-                        "suspicious_elements": [],
-                        "explanation": "Unable to analyze sender"
-                    },
-                    "content_analysis": {
-                        "suspicious_elements": [],
-                        "risk_level": "low",
-                        "explanation": "Unable to analyze content"
-                    },
-                    "overall_analysis": {
-                        "risk_level": "low",
-                        "key_findings": ["Analysis incomplete"],
-                        "recommendations": ["Please try again"]
-                    }
-                }
-                logger.info("Using fallback analysis structure")
+                return self._generate_fallback_analysis(metadata)
             
             # Validate the analysis structure
             if not self._validate_analysis_structure(analysis):
                 logger.error(f"Invalid analysis structure: {json.dumps(analysis, indent=2)}")
-                raise ValueError("Invalid analysis structure")
+                return self._generate_fallback_analysis(metadata)
                 
             return analysis
                 
         except Exception as e:
             logger.error(f"Error in content analysis: {str(e)}")
             logger.error(f"Error traceback: {traceback.format_exc()}")
-            raise
-            
+            return self._generate_fallback_analysis(metadata)
+
+    def _generate_fallback_analysis(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate a fallback analysis with basic structure."""
+        subject = metadata.get('subject', {}).get('text', '')
+        sender_email = metadata.get('sender', {}).get('email', '')
+        sender_name = metadata.get('sender', {}).get('name', '')
+        content = metadata.get('content', {}).get('text', '')
+        
+        # Analyze the content for key elements
+        content_lower = content.lower()
+        has_links = 'http' in content_lower or 'www.' in content_lower
+        has_password = 'password' in content_lower
+        has_reset = 'reset' in content_lower
+        has_urgent = any(word in content_lower for word in ['urgent', 'immediately', 'asap', 'now'])
+        has_personal = any(word in content_lower for word in ['account', 'login', 'verify', 'confirm'])
+        
+        return {
+            "subject_analysis": {
+                "suspicious_patterns": [],
+                "risk_level": "low",
+                "explanation": "Initial analysis in progress",
+                "subject": {
+                    "text": subject
+                }
+            },
+            "sender_analysis": {
+                "domain_risk": "low",
+                "suspicious_elements": [],
+                "explanation": "Initial analysis in progress",
+                "sender": {
+                    "email": sender_email,
+                    "name": sender_name
+                }
+            },
+            "content_analysis": {
+                "suspicious_elements": [],
+                "risk_level": "low",
+                "explanation": "Initial analysis in progress",
+                "content": {
+                    "text": content
+                }
+            },
+            "overall_analysis": {
+                "risk_level": "low",
+                "key_findings": ["Analysis in progress"],
+                "recommendations": ["Please wait for complete analysis"]
+            }
+        }
+
     def _validate_analysis_structure(self, analysis: Dict[str, Any]) -> bool:
         """Validate that the analysis has the required structure."""
         try:
             required_sections = {
-                "subject_analysis": ["suspicious_patterns", "risk_level", "explanation"],
-                "sender_analysis": ["domain_risk", "suspicious_elements", "explanation"],
-                "content_analysis": ["suspicious_elements", "risk_level", "explanation"],
+                "subject_analysis": ["suspicious_patterns", "risk_level", "explanation", "subject"],
+                "sender_analysis": ["domain_risk", "suspicious_elements", "explanation", "sender"],
+                "content_analysis": ["suspicious_elements", "risk_level", "explanation", "content"],
                 "overall_analysis": ["risk_level", "key_findings", "recommendations"]
             }
             

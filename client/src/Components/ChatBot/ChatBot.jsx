@@ -7,16 +7,15 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
     const [isTyping, setIsTyping] = useState(false);
     const [isActive, setIsActive] = useState(false);
     const [chatId, setChatId] = useState(null);
+    const [currentCategory, setCurrentCategory] = useState('subject');
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
     const startChat = async () => {
-        if (isActive) return; // Prevent multiple starts
+        if (isActive) return;
         setIsActive(true);
         setIsTyping(true);
 
         try {
-            console.log('Starting chat with props:', { email, initialScanResult });
-
-            // Ensure email data is properly formatted
             const emailData = {
                 subject: email?.subject || '',
                 sender: email?.sender || '',
@@ -29,7 +28,7 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
                 conversation: []
             };
 
-            console.log('Sending request to server:', JSON.stringify(requestBody, null, 2));
+            console.log('Sending request:', requestBody);
 
             const response = await fetch('http://localhost:5001/api/ai-analyze', {
                 method: 'POST',
@@ -40,36 +39,89 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Server error response:', errorData);
-                throw new Error(errorData.error || 'Network response was not ok');
+                throw new Error('Failed to start chat');
             }
 
             const data = await response.json();
-            console.log('Server response data:', data);
+            console.log('Received data:', data);
 
-            if (data.error) {
-                console.error('Error in response data:', data.error);
-                throw new Error(data.error);
-            }
-
-            // Store the chat_id
-            setChatId(data.chat_id);
-
-            // Add only the question to the chat
+            // Handle both response formats
             if (data.questions) {
-                setMessages([{
-                    role: 'assistant',
-                    content: data.questions,
-                    chat_id: data.chat_id
-                }]);
+                // Handle structured questions format
+                if (typeof data.questions === 'object') {
+                    setChatId(data.chat_id);
+                    setCurrentCategory(data.current_category || 'subject');
+
+                    // Add welcome message
+                    setMessages([
+                        {
+                            role: 'assistant',
+                            content: "Hi! I'll help you analyze this email. Let me ask you a few simple questions to better understand if it's safe.",
+                            type: 'welcome'
+                        }
+                    ]);
+
+                    // Add the first question after a short delay
+                    setTimeout(() => {
+                        let firstQuestion = null;
+                        if (data.questions.subject_analysis?.user_questions?.length > 0) {
+                            firstQuestion = data.questions.subject_analysis.user_questions[0];
+                        } else if (data.questions.sender_analysis?.user_questions?.length > 0) {
+                            firstQuestion = data.questions.sender_analysis.user_questions[0];
+                            setCurrentCategory('sender');
+                        } else if (data.questions.content_analysis?.user_questions?.length > 0) {
+                            firstQuestion = data.questions.content_analysis.user_questions[0];
+                            setCurrentCategory('content');
+                        }
+
+                        if (firstQuestion) {
+                            setMessages(prev => [...prev, {
+                                role: 'assistant',
+                                content: firstQuestion,
+                                type: 'question'
+                            }]);
+                        } else {
+                            setMessages(prev => [...prev, {
+                                role: 'assistant',
+                                content: "I'm having trouble analyzing this email. Please try again.",
+                                type: 'error'
+                            }]);
+                        }
+                    }, 1000);
+                }
+                // Handle string format (fallback)
+                else if (typeof data.questions === 'string') {
+                    setChatId(data.chat_id);
+                    setCurrentCategory(data.current_category || 'subject');
+
+                    // Add welcome message
+                    setMessages([
+                        {
+                            role: 'assistant',
+                            content: "Hi! I'll help you analyze this email. Let me ask you a few simple questions to better understand if it's safe.",
+                            type: 'welcome'
+                        }
+                    ]);
+
+                    // Add the question after a short delay
+                    setTimeout(() => {
+                        setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: data.questions,
+                            type: 'question'
+                        }]);
+                    }, 1000);
+                }
+            } else {
+                throw new Error('Invalid response format');
             }
 
         } catch (error) {
             console.error('Error in startChat:', error);
             setMessages([{
                 role: 'assistant',
-                content: `Error: ${error.message}. Please try again.`
+                content: `Sorry, I'm having trouble starting the chat. Please try again.`,
+                type: 'error'
             }]);
         } finally {
             setIsTyping(false);
@@ -77,18 +129,23 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
     };
 
     const handleSendMessage = async () => {
-        if (!userInput.trim() || !chatId) return; // Prevent sending without chatId
+        if (!userInput.trim() || !chatId) return;
 
-        // Add user message to chat
         const userMessage = {
             role: 'user',
-            content: userInput
+            content: userInput,
+            type: 'answer'
         };
+
+        // Update messages state with user message
         setMessages(prev => [...prev, userMessage]);
         setUserInput('');
         setIsTyping(true);
 
         try {
+            // Construct the updated conversation including the new user message
+            const updatedConversation = [...messages, userMessage];
+
             const response = await fetch('http://localhost:5001/api/ai-analyze', {
                 method: 'POST',
                 headers: {
@@ -101,38 +158,73 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
                         content: email?.content || ''
                     },
                     initialScanResult: initialScanResult || {},
-                    conversation: messages,
-                    chat_id: chatId
+                    conversation: updatedConversation,
+                    chat_id: chatId,
+                    current_category: currentCategory,
+                    question_index: currentQuestionIndex
                 })
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error('Server error:', errorData);
-                throw new Error(errorData.error || 'Network response was not ok');
+                throw new Error('Failed to process response');
             }
 
             const data = await response.json();
-            console.log('Received response:', data);
+            console.log('Received response data:', data);
 
             if (data.error) {
                 throw new Error(data.error);
             }
 
-            // Add only the question to the chat
-            if (data.questions) {
+            // Update current category and question index
+            if (data.current_category) {
+                setCurrentCategory(data.current_category);
+            }
+            if (data.question_index !== undefined) {
+                setCurrentQuestionIndex(data.question_index);
+            }
+
+            // Handle final analysis
+            if (data.is_final) {
+                onNewAnalysis(data.score);
                 setMessages(prev => [...prev, {
                     role: 'assistant',
-                    content: data.questions,
-                    chat_id: data.chat_id
+                    content: `Thank you for your answers! I've updated the risk assessment based on our conversation.`,
+                    type: 'final'
                 }]);
+            } else {
+                // Add the next question directly without acknowledgment
+                setTimeout(() => {
+                    let nextQuestion = null;
+                    let nextCategory = currentCategory;
+
+                    // Determine the next category and question
+                    if (currentCategory === 'subject' && data.questions?.sender_analysis?.user_questions?.length > 0) {
+                        nextCategory = 'sender';
+                        nextQuestion = data.questions.sender_analysis.user_questions[0];
+                    } else if (currentCategory === 'sender' && data.questions?.content_analysis?.user_questions?.length > 0) {
+                        nextCategory = 'content';
+                        nextQuestion = data.questions.content_analysis.user_questions[0];
+                    }
+
+                    if (nextQuestion) {
+                        setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: nextQuestion,
+                            type: 'question'
+                        }]);
+                        setCurrentCategory(nextCategory);
+                        setCurrentQuestionIndex(prev => prev + 1);
+                    }
+                }, 1000);
             }
 
         } catch (error) {
-            console.error('Error sending message:', error);
+            console.error('Error in handleSendMessage:', error);
             setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: `Error: ${error.message}. Please try again.`
+                content: `Sorry, I'm having trouble processing your response. Please try again.`,
+                type: 'error'
             }]);
         } finally {
             setIsTyping(false);
@@ -141,35 +233,40 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis }) => {
 
     if (!isActive) {
         return (
-            <button className="start-chat-button" onClick={startChat}>
-                Start Chat with AI Assistant
-            </button>
+            <div className="chatbot-container">
+                <button className="start-chat-button" onClick={startChat}>
+                    Start Chat with AI Assistant
+                </button>
+            </div>
         );
     }
 
     return (
-        <div className="chat-container">
-            <div className="chat-messages">
+        <div className="chatbot-container">
+            <div className="chatbot-messages">
                 {messages.map((message, index) => (
-                    <div key={index} className={`message ${message.role}`}>
+                    <div key={index} className={`message ${message.role} ${message.type}`}>
                         {message.content}
                     </div>
                 ))}
                 {isTyping && (
                     <div className="message assistant typing">
-                        AI is typing...
+                        <span className="typing-indicator">...</span>
                     </div>
                 )}
             </div>
-            <div className="chat-input">
+            <div className="chatbot-input">
                 <input
                     type="text"
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="Type your message..."
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    placeholder="Type your answer here..."
+                    disabled={isTyping}
                 />
-                <button onClick={handleSendMessage}>Send</button>
+                <button onClick={handleSendMessage} disabled={isTyping || !userInput.trim()}>
+                    Send
+                </button>
             </div>
         </div>
     );

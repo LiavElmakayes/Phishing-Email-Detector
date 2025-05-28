@@ -7,10 +7,12 @@ from .metadata_agent import MetadataAgent
 from .analysis_agent import AnalysisAgent
 from .question_agent import QuestionAgent
 from .risk_agent import RiskAssessmentAgent
+from .response_agent import ResponseAgent
 
 __all__ = [
     'MetadataAgent',
     'AnalysisAgent',
     'QuestionAgent',
-    'RiskAssessmentAgent'
+    'RiskAssessmentAgent',
+    'ResponseAgent'
 ] 

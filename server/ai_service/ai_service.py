@@ -13,6 +13,7 @@ import time
 import json
 import requests
 from orchestrator import EmailAnalysisOrchestrator
+from typing import List, Dict, Any
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG,
@@ -38,7 +39,7 @@ CORS(app, resources={
 # OpenRouter configuration
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME", "thudm/glm-z1-32b:free")
+MODEL_NAME = os.getenv("MODEL_NAME", "microsoft/phi-4-reasoning-plus:free")
 
 # Ensure the OpenRouter API key is loaded correctly
 if not OPENROUTER_API_KEY:
@@ -51,107 +52,83 @@ if not OPENROUTER_API_KEY.startswith("sk-or-v1-"):
 
 logger.info(f"API key starts with: {OPENROUTER_API_KEY[:10]}...")
 
-def make_openrouter_request(messages, max_tokens=1000, temperature=0.7, stream=False):
-    """Make a request to OpenRouter API."""
-    try:
-        # If messages is already a complete payload, use it directly
-        if isinstance(messages, dict) and "messages" in messages:
-            payload = messages
-        else:
-            # Otherwise construct the payload
+def make_openrouter_request(messages: List[Dict[str, str]], max_tokens: int = 1000, temperature: float = 0.3) -> Dict[str, Any]:
+    """Make a request to the OpenRouter API with retry logic."""
+    max_retries = 3
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "Phishing Detector",
+                "Content-Type": "application/json"
+            }
+            
+            # Add system message to enforce JSON output if not present
+            if not any(msg.get("role") == "system" for msg in messages):
+                messages.insert(0, {
+                    "role": "system",
+                    "content": "You are a JSON generator. Your ONLY task is to output a valid JSON object. DO NOT include any text before or after the JSON object."
+                })
+            
             payload = {
                 "model": MODEL_NAME,
                 "messages": messages,
+                "temperature": temperature,  # Lower temperature for more deterministic responses
                 "max_tokens": max_tokens,
-                "temperature": temperature,
-                "stream": stream
+                "stream": False,
+                "response_format": { "type": "json_object" },
+                "top_p": 0.1,  # Lower top_p for more focused sampling
+                "frequency_penalty": 0.0,  # Reduce repetition
+                "presence_penalty": 0.0,  # Reduce repetition
+                "stop": None  # Don't stop at any specific tokens
             }
-
-        # Format the API key as a proper JWT (Bearer token)
-        # OpenRouter expects the API key to be passed as a Bearer token
-        auth_token = f"Bearer {OPENROUTER_API_KEY}"
-
-        headers = {
-            "Authorization": auth_token,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:5001",
-            "X-Title": "Phishing Detector",
-            "OpenAI-Organization": "org-123",  # Add organization header
-            "OpenAI-Project": "proj-123"  # Add project header
-        }
-
-        logger.debug(f"Making request to OpenRouter with payload: {json.dumps(payload, indent=2)}")
-        logger.debug(f"Using headers: {json.dumps({k: v for k, v in headers.items() if k != 'Authorization'}, indent=2)}")
-        logger.debug(f"Using API key: {OPENROUTER_API_KEY[:10]}...")
-        
-        response = requests.post(OPENROUTER_API_URL, json=payload, headers=headers)
-        
-        logger.debug(f"OpenRouter API Response Status: {response.status_code}")
-        logger.debug(f"OpenRouter API Response Headers: {response.headers}")
-        logger.debug(f"OpenRouter API Response Body: {response.text}")
-        
-        if response.status_code == 200:
-            try:
-                response_data = response.json()
-                logger.debug(f"Parsed OpenRouter Response: {json.dumps(response_data, indent=2)}")
-                
-                # Check for rate limit error in successful response
-                if "error" in response_data:
-                    error_msg = response_data["error"].get("message", "Unknown error")
-                    if "Rate limit exceeded" in error_msg:
-                        logger.error(f"Rate limit exceeded: {error_msg}")
-                        raise ValueError(f"OpenRouter rate limit exceeded. Please try again later or add credits to your account.")
-                    else:
-                        raise ValueError(f"OpenRouter API error: {error_msg}")
-                
-                # Validate response structure
-                if "choices" not in response_data:
-                    logger.error(f"Missing 'choices' in response: {json.dumps(response_data, indent=2)}")
-                    raise ValueError("Invalid response format from OpenRouter: missing 'choices'")
-                
-                if not response_data["choices"]:
-                    logger.error("Empty 'choices' array in response")
-                    raise ValueError("Invalid response format from OpenRouter: empty 'choices' array")
-                
-                if "message" not in response_data["choices"][0]:
-                    logger.error(f"Missing 'message' in first choice: {json.dumps(response_data['choices'][0], indent=2)}")
-                    raise ValueError("Invalid response format from OpenRouter: missing 'message' in first choice")
-                
-                if "content" not in response_data["choices"][0]["message"]:
-                    logger.error(f"Missing 'content' in message: {json.dumps(response_data['choices'][0]['message'], indent=2)}")
-                    raise ValueError("Invalid response format from OpenRouter: missing 'content' in message")
-                
-                # Log the actual content
-                content = response_data["choices"][0]["message"]["content"]
-                logger.debug(f"AI Model Content: {content}")
-                        
-                return response_data
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON Parse Error: {str(e)}")
-                logger.error(f"Raw Response: {response.text}")
-                raise ValueError(f"Failed to parse OpenRouter API response: {str(e)}")
-        elif response.status_code == 429:
-            logger.error("Rate limit exceeded")
-            raise ValueError("OpenRouter rate limit exceeded. Please try again later or add credits to your account.")
-        else:
-            logger.error(f"Error from OpenRouter API: {response.text}")
-            raise ValueError(f"OpenRouter API request failed with status {response.status_code}: {response.text}")
             
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Network error making OpenRouter request: {str(e)}")
-        raise ValueError(f"Network error connecting to OpenRouter: {str(e)}")
-    except Exception as e:
-        logger.error(f"Error making OpenRouter request: {str(e)}")
-        logger.error(f"Error traceback: {traceback.format_exc()}")
-        raise
+            logger.debug(f"Making request to OpenRouter with payload: {json.dumps(payload, indent=2)}")
+            response = requests.post(
+                OPENROUTER_API_URL,
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+            # Check for rate limit error specifically
+            if response.status_code == 429:
+                error_data = response.json()
+                if "error" in error_data and "message" in error_data["error"]:
+                    error_msg = error_data["error"]["message"]
+                    if "Rate limit exceeded" in error_msg:
+                        logger.error(f"OpenRouter rate limit exceeded: {error_msg}")
+                        raise ValueError(f"OpenRouter rate limit exceeded. Please add credits or try again later. Details: {error_msg}")
+            
+            response.raise_for_status()
+            logger.debug(f"Raw OpenRouter Response: {response.text}")
+            return response.json()
+            
+        except requests.exceptions.RequestException as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                time.sleep(retry_delay * (attempt + 1))  # Exponential backoff
+            else:
+                if "rate limit exceeded" in str(e).lower():
+                    raise ValueError("OpenRouter rate limit exceeded. Please add credits or try again later.")
+                else:
+                    raise ValueError(f"Failed to connect to OpenRouter after {max_retries} attempts: {str(e)}")
+                    
+    raise ValueError(f"Failed to connect to OpenRouter after {max_retries} attempts")
 
 # Test OpenRouter connection
 try:
     logger.info("Testing OpenRouter connection...")
-    test_response = make_openrouter_request([
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Say hello briefly."}
-    ], max_tokens=10)
+    test_response = make_openrouter_request(
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": "Say hello briefly."}
+        ],
+        max_tokens=10
+    )
     
     if test_response and "choices" in test_response and len(test_response["choices"]) > 0:
         content = test_response["choices"][0]["message"]["content"]
@@ -278,11 +255,11 @@ def analyze_email():
                 )
                 
                 # Ensure questions text preserves newlines
-                if isinstance(result.get('question'), str):
+                if isinstance(result.get('questions'), str):
                     # Replace any literal \n with actual newlines
-                    result['question'] = result['question'].replace('\\n', '\n')
+                    result['questions'] = result['questions'].replace('\\n', '\n')
                     # Ensure double newlines between sections
-                    result['question'] = result['question'].replace('\n\n\n', '\n\n')
+                    result['questions'] = result['questions'].replace('\n\n\n', '\n\n')
                 
                 logger.info(f"Conversation result: {json.dumps(result, indent=2)}")
                 
@@ -296,7 +273,7 @@ def analyze_email():
                 return jsonify({
                     "error": "Failed to continue conversation",
                     "error_details": str(e),
-                    "question": "I'm having trouble processing your response. Please try again.",
+                    "questions": "I'm having trouble processing your response. Please try again.",
                     "score": None,
                     "chat_id": chat_id
                 }), 500
