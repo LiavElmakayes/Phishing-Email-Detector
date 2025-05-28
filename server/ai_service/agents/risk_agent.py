@@ -15,7 +15,7 @@ class RiskAssessmentAgent:
         """Initialize the risk assessment agent with the request function."""
         self.make_request = make_request
         
-    def calculate_risk(self, analysis: Dict[str, Any], user_responses: List[str]) -> Dict[str, Any]:
+    def calculate_risk(self, analysis: Dict[str, Any], user_responses: List[str], response_analysis: Dict[str, Any] = None) -> Dict[str, Any]:
         """Calculate final risk score based on analysis and user responses."""
         try:
             messages = [
@@ -26,10 +26,11 @@ class RiskAssessmentAgent:
 Rules:
 1. Consider initial analysis
 2. Evaluate user responses
-3. Calculate risk score (0-1)
-4. Provide detailed analysis
-5. Give clear recommendations
-6. Return a structured response with the following format:
+3. Consider response analysis if available
+4. Calculate risk score (0-1)
+5. Provide detailed analysis
+6. Give clear recommendations
+7. Return a structured response with the following format:
 {
     "score": 0.0 to 1.0,
     "analysis": {
@@ -38,7 +39,8 @@ Rules:
         "content_risk": "low/medium/high",
         "overall_risk": "low/medium/high",
         "key_findings": ["list of findings"],
-        "user_response_analysis": "analysis of user responses"
+        "user_response_analysis": "analysis of user responses",
+        "response_risk_factors": ["list of risk factors from responses"]
     },
     "recommendation": {
         "action": "recommended action",
@@ -52,7 +54,8 @@ Rules:
                     "content": f"""Calculate risk score based on:
                     
 Initial Analysis: {json.dumps(analysis, indent=2)}
-User Responses: {json.dumps(user_responses, indent=2)}"""
+User Responses: {json.dumps(user_responses, indent=2)}
+Response Analysis: {json.dumps(response_analysis, indent=2) if response_analysis else "Not available"}"""
                 }
             ]
             
@@ -99,7 +102,7 @@ User Responses: {json.dumps(user_responses, indent=2)}"""
             analysis = result["analysis"]
             required_analysis_fields = [
                 "subject_risk", "sender_risk", "content_risk", "overall_risk",
-                "key_findings", "user_response_analysis"
+                "key_findings", "user_response_analysis", "response_risk_factors"
             ]
             if not all(field in analysis for field in required_analysis_fields):
                 return False

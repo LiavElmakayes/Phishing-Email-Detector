@@ -17,7 +17,7 @@ class MetadataAgent:
         self.make_request = make_request
         
     def extract_metadata(self, email_data: Dict[str, str]) -> Dict[str, Any]:
-        """Extract and validate email metadata."""
+        """Extract and validate metadata from the email."""
         try:
             messages = [
                 {
@@ -54,22 +54,12 @@ IMPORTANT: You must return ONLY a valid JSON object. Do not include any text bef
                 },
                 {
                     "role": "user",
-                    "content": f"""Extract metadata from this email:
-                    
-Subject: {email_data.get('subject', '')}
-Sender: {email_data.get('sender', '')}
-Content: {email_data.get('content', '')}"""
+                    "content": f"Extract metadata from this email:\n\nSubject: {email_data.get('subject', '')}\nSender: {email_data.get('sender', '')}\nContent: {email_data.get('content', '')}"
                 }
             ]
             
             logger.debug(f"Making request to AI model with messages: {json.dumps(messages, indent=2)}")
-            response = self.make_request({
-                "messages": messages,
-                "model": "microsoft/phi-4-reasoning-plus:free",
-                "temperature": 0.1,
-                "max_tokens": 500,
-                "stream": False
-            })
+            response = self.make_request(messages)
             
             logger.debug(f"Received response from AI model: {json.dumps(response, indent=2)}")
             
