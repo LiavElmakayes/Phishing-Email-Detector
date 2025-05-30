@@ -216,7 +216,14 @@ const EmailViewPage = () => {
                         email={{
                             subject: email.subject || '',
                             sender: email.sender || '',
-                            content: email.content || ''
+                            content: email.content || '',
+                            metadata: {
+                                scanResult: scanResult.result || 0,
+                                legitimacy: scanResult.legitimacy || 'Unknown',
+                                spamAssassinScore: scanResult.result || 0,
+                                spamAssassinDetails: scanResult.details || {},
+                                rawScanResult: scanResult.raw || {}
+                            }
                         }}
                         initialScanResult={{
                             result: scanResult.result || 0,
