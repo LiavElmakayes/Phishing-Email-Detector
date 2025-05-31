@@ -16,6 +16,7 @@
 .navbar-right {
     display: flex;
     gap: 2rem;
+    align-items: center;
 }
 
 .navbar-icon {
@@ -36,6 +37,11 @@
     padding: 0.5rem 1rem;
     border-radius: 4px;
     transition: background-color 0.2s;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: inherit;
 }
 
 .nav-link:hover {
@@ -47,6 +53,15 @@
     color: white;
 }
 
+.logout-button {
+    color: #dc3545;
+}
+
+.logout-button:hover {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
 @media (max-width: 768px) {
     .NavBar {
         padding: 0.5rem 1rem;
@@ -54,5 +69,9 @@
 
     .navbar-icon {
         margin-right: 0.25rem;
+    }
+
+    .navbar-right {
+        gap: 1rem;
     }
 }
