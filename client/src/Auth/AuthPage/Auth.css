@@ -1,94 +1,265 @@
 .Auth {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    gap: 4rem;
-    position: relative;
-  }
-  
-  .Auth > div {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  
-  
-  /* left side */
-  .a-left{
-      gap: 2rem;
-  }
-  
-  .a-left > img {
-    width: 4rem;
-    height: 4rem;
-  }
-  
-  .Webname > h1 {
-      font-size: 3rem;
-      background-color: red;
-    
-      /* Create the gradient. */
-      background-image: var(--buttonBg);
-      
-      /* Set the background size and repeat properties. */
-      background-size: 100%;
-      background-repeat: repeat;
-    
-      /* Use the text as a mask for the background. */
-      /* This will show the gradient as a text color rather than element bg. */
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent; 
-      -moz-background-clip: text;
-      -moz-text-fill-color: transparent;
-  }
-  
-  .Webname>h6{
-      font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e2ebf0 0%, #ccf0f0 100%);
+  padding: 2rem;
+  gap: 6rem;
+}
+
+.a-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  max-width: 600px;
+}
+
+.VscEditSession {
+  background: white;
+  border-radius: 50%;
+  padding: 2.5rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2.5rem;
+  transition: transform 0.3s ease;
+}
+
+.VscEditSession:hover {
+  transform: scale(1.05);
+}
+
+.Webname h1 {
+  font-size: 3.5rem;
+  background: linear-gradient(45deg, #007bff, #28a745);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.Webname h6 {
+  font-size: 1.4rem;
+  color: #555;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.a-right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  max-width: 500px;
+}
+
+.InfoForm {
+  background: white;
+  padding: 3rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.InfoForm h3 {
+  font-size: 2.2rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.InfoForm>div {
+  width: 100%;
+}
+
+.InfoForm>div>.InfoInput {
+  margin-bottom: 1rem;
+}
+
+.InfoForm>div>.InfoInput:last-child {
+  margin-bottom: 0;
+}
+
+.InfoInput {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.InfoInput:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  background: white;
+}
+
+.InfoInput::placeholder {
+  color: #999;
+  font-size: 1rem;
+}
+
+.InfoButton {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(45deg, #007bff, #28a745);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+}
+
+.InfoButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+}
+
+.InfoButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pointer {
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: block;
+  text-align: center;
+  margin-top: 1rem;
+  transition: color 0.3s ease;
+  font-weight: 500;
+}
+
+.pointer:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Loading animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
 
+  100% {
+    transform: rotate(360deg);
+  }
+}
 
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
 
-  .InfoForm{
-    display: flex;
+/* Responsive design */
+@media (max-width: 1024px) {
+  .Auth {
+    gap: 3rem;
+    padding: 1.5rem;
+  }
+
+  .Webname h1 {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .Auth {
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 2rem;
+    gap: 3rem;
+    padding: 1.5rem;
   }
-  
-  .InfoInput{
-    border: none;
-    outline: none;
-    background-color: var(--inputColor);
-    border-radius: 8px;
-    padding: 20px;
-    flex:1;
+
+  .a-left,
+  .a-right {
+    width: 100%;
+    padding: 1rem;
   }
-  
-  .InfoForm>div{
-    display: flex;
-    gap: 1rem;
-    height: 2rem;
-    width: 90%;
+
+  .Webname h1 {
+    font-size: 2.5rem;
   }
-  
-  .InfoButton{
-    width: 6rem;
-    height: 2rem;
-    align-self: flex-end;
+
+  .Webname h6 {
+    font-size: 1.2rem;
   }
-  
-  
-  .AuthForm{
-      background-color: var(--cardColor);
-      border-radius: 1rem;
-      padding: 1rem;
+
+  .InfoForm {
+    padding: 2rem;
   }
-  
-  .AuthForm>div{
-      width: 100%;
-      align-items: center;
-      justify-content: center;
+
+  .InfoForm h3 {
+    font-size: 2rem;
   }
+}
+
+@media (max-width: 480px) {
+  .Auth {
+    padding: 1rem;
+  }
+
+  .Webname h1 {
+    font-size: 2rem;
+  }
+
+  .Webname h6 {
+    font-size: 1rem;
+  }
+
+  .InfoForm {
+    padding: 1.5rem;
+  }
+
+  .InfoForm h3 {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .InfoInput {
+    padding: 10px 12px;
+    font-size: 1rem;
+  }
+
+  .InfoButton {
+    padding: 10px;
+    font-size: 1rem;
+  }
+}
