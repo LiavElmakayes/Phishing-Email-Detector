@@ -17,7 +17,18 @@ const authSlice = createSlice({
             state.error = action.payload;
         },
         setUser: (state, action) => {
-            state.user = action.payload;
+            // Only store essential user data
+            if (action.payload) {
+                state.user = {
+                    uid: action.payload.uid,
+                    email: action.payload.email,
+                    displayName: action.payload.displayName,
+                    photoURL: action.payload.photoURL,
+                    emailVerified: action.payload.emailVerified
+                };
+            } else {
+                state.user = null;
+            }
         },
         clearError: (state) => {
             state.error = null;

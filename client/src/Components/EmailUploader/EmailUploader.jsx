@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 import './EmailUploader.css';
 import { GrUpload } from "react-icons/gr";
 import { FaSpinner } from "react-icons/fa";
+import { ref, push, set, get } from "firebase/database";
+import { useSelector } from 'react-redux';
+import { database } from '../../firebase';
 
 const EmailUploader = ({ onScanResult }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -10,6 +13,46 @@ const EmailUploader = ({ onScanResult }) => {
     const [showScrollPrompt, setShowScrollPrompt] = useState(false);
     const fileInputRef = useRef(null);
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
+    const user = useSelector((state) => state.AuthReducer.user);
+
+    const saveScanToHistory = async (scanData) => {
+        if (!user) {
+            console.log('No user found, cannot save scan');
+            return;
+        }
+
+        console.log('Saving scan data:', scanData);
+
+        const scanRef = ref(database, `users/${user.uid}/emailHistory`);
+        const newScanRef = push(scanRef);
+
+        const historyEntry = {
+            ...scanData,
+            scanDate: new Date().toISOString(),
+            scanType: 'manual_upload',
+            filename: scanData.filename,
+            riskLevel: scanData.legitimacy === 'Legitimate' ? 'Low' : 'High',
+            legitimacy: scanData.legitimacy
+        };
+
+        console.log('History entry to save:', historyEntry);
+
+        try {
+            await set(newScanRef, historyEntry);
+            console.log('Scan saved successfully with ID:', newScanRef.key);
+
+            // Verify the data was saved
+            const savedData = await get(newScanRef);
+            console.log('Verified saved data:', savedData.val());
+        } catch (error) {
+            console.error('Error saving scan to history:', error);
+            console.error('Error details:', {
+                code: error.code,
+                message: error.message,
+                stack: error.stack
+            });
+        }
+    };
 
     const handleDragEnter = (e) => {
         e.preventDefault();
@@ -70,12 +113,14 @@ const EmailUploader = ({ onScanResult }) => {
                 })
                 .then(data => {
                     setIsLoading(false);
-                    onScanResult({
+                    const scanResult = {
                         ...data,
                         filename: file.name
-                    });
+                    };
+                    onScanResult(scanResult);
+                    // Save to Firebase history
+                    saveScanToHistory(scanResult);
                     setShowScrollPrompt(true);
-                    // Hide the prompt after 5 seconds
                     setTimeout(() => setShowScrollPrompt(false), 5000);
                 })
                 .catch(error => {
