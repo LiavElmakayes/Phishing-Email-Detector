@@ -1,54 +1,68 @@
 .toolbar {
     background-color: white;
     border-bottom: 1px solid #e5e7eb;
-    padding: 0.375rem 1rem;
+    padding: 0.5rem 1rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
     height: 100%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .checkbox-container {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s;
+}
+
+.checkbox-container:hover {
+    background-color: #f3f4f6;
 }
 
 .checkbox {
-    width: 1.5rem;
-    height: 1.5rem;
-    border: 2px solid #222222;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #d1d5db;
     border-radius: 0.25rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     appearance: none;
     -webkit-appearance: none;
     background-color: white;
     position: relative;
     margin: 0;
-    margin-right: 1rem;
+    padding: 0;
 }
 
 .checkbox:checked {
     background-color: #3b82f6;
     border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .checkbox:checked::after {
-    content: '';
+    content: '✓';
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 0.5rem;
-    height: 0.5rem;
-    background-color: white;
-    border-radius: 0.125rem;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: bold;
+    line-height: 1;
 }
 
 .checkbox:hover {
     border-color: #3b82f6;
     background-color: #f3f4f6;
+}
+
+.checkbox:checked:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
 }
 
 .dropdown-button {
@@ -59,26 +73,34 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
 }
 
 .dropdown-button:hover {
     background-color: #f3f4f6;
     color: #111827;
+    transform: translateY(-1px);
 }
 
 .dropdown-icon {
-    width: 1rem;
-    height: 1rem;
+    width: 1.125rem;
+    height: 1.125rem;
 }
 
 .toolbar-button {
-    padding: 0.375rem;
+    padding: 0.5rem;
     border-radius: 0.375rem;
     color: #4b5563;
     transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    position: relative;
 }
 
 .toolbar-button:hover {
@@ -87,34 +109,41 @@
     transform: translateY(-1px);
 }
 
+.toolbar-button:active {
+    transform: translateY(0);
+}
+
 .toolbar-icon {
-    width: 1rem;
-    height: 1rem;
+    width: 1.125rem;
+    height: 1.125rem;
 }
 
 .pagination {
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     color: #6b7280;
-    padding: 0.375rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 0.375rem;
     transition: all 0.2s;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
 }
 
 .pagination:hover {
     background-color: #f3f4f6;
     color: #111827;
+    border-color: #d1d5db;
 }
 
 @media (max-width: 768px) {
     .toolbar {
         padding: 0.375rem 0.75rem;
-        gap: 0.25rem;
+        gap: 0.5rem;
     }
 
     .checkbox {
-        width: 1rem;
-        height: 1rem;
+        width: 1.125rem;
+        height: 1.125rem;
         border-width: 1.5px;
     }
 
@@ -124,16 +153,16 @@
     }
 
     .toolbar-button {
-        padding: 0.25rem;
+        padding: 0.375rem;
     }
 
     .toolbar-icon {
-        width: 0.875rem;
-        height: 0.875rem;
+        width: 1rem;
+        height: 1rem;
     }
 
     .pagination {
-        padding: 0.25rem;
-        font-size: 0.75rem;
+        padding: 0.375rem 0.5rem;
+        font-size: 0.8125rem;
     }
 }

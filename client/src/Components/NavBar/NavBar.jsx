@@ -1,7 +1,7 @@
 import React from 'react'
 import './NavBar.css'
 import { MdOutlineSecurity } from "react-icons/md";
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useSelector } from 'react-redux';
@@ -21,19 +21,28 @@ const NavBar = () => {
 
     return (
         <div className="NavBar">
-            <div className="navbar-left">
-                <MdOutlineSecurity
-                    size={30}
-                    className="navbar-icon"
-                />
-                <Link to="/" className="navbar-title">Phishing Email Detector</Link>
-            </div>
+            <Link to="/" className="navbar-left">
+                <div className="icon-wrapper">
+                    <MdOutlineSecurity
+                        size={24}
+                        className="navbar-icon"
+                    />
+                </div>
+                <span className="navbar-title">Phishing Email Detector</span>
+            </Link>
             <div className="navbar-right">
                 {/* Show these links only when logged in */}
                 {user && (
                     <>
-                        <Link to="/" className="nav-link">Upload Email</Link>
-                        <Link to="/demo" className="nav-link">Email Demo</Link>
+                        <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                            Upload Email
+                        </NavLink>
+                        <NavLink to="/history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                            Scan History
+                        </NavLink>
+                        <NavLink to="/demo" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                            Email Demo
+                        </NavLink>
                         {/* Logout Button */}
                         <button onClick={handleLogout} className="nav-link logout-button">
                             Logout

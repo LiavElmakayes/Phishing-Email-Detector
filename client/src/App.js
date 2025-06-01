@@ -5,6 +5,7 @@ import EmailUploader from './Components/EmailUploader/EmailUploader';
 import ScanResult from './Components/ScanResult/ScanResult';
 import ChatbotPopup from './Components/ChatbotPopup/ChatbotPopup';
 import EmailDemoPage from './Components/EmailDemoPage/EmailDemoPage';
+import EmailHistory from './Components/EmailHistory/EmailHistory';
 import Auth from './Auth/AuthPage/Auth';
 import './App.css';
 import NavBar from './Components/NavBar/NavBar';
@@ -24,7 +25,19 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      dispatch(setUser(user));
+      if (user) {
+        // Get only the essential user data
+        const userData = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified
+        };
+        dispatch(setUser(userData));
+      } else {
+        dispatch(setUser(null));
+      }
       setLoading(false);
     });
 
@@ -76,6 +89,10 @@ function App() {
             <Route
               path="/demo/:id"
               element={user ? <EmailDemoPage /> : <Navigate to="/auth" replace />}
+            />
+            <Route
+              path="/history"
+              element={user ? <EmailHistory /> : <Navigate to="/auth" replace />}
             />
             <Route
               path="*"
