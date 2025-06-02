@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { FaShieldAlt, FaExclamationTriangle } from 'react-icons/fa';
 import ChatBot from '../../ChatBot/ChatBot';
 import './EmailViewPage.css';
@@ -162,7 +162,7 @@ const EmailViewPage = () => {
 
     const percentage = aiAnalysisScore !== null ? aiAnalysisScore : (scanResult ? (scanResult.result || 0) * 10 : 0);
     const isLegitimate = aiAnalysisScore !== null ? aiAnalysisScore < 50 : (scanResult ? scanResult.legitimacy === 'Legitimate' : false);
-    const icon = isLegitimate ? <FaShieldAlt size={40} className="email-legitimate-icon" /> : <FaExclamationTriangle size={40} className="email-alert-icon" />;
+    const icon = isLegitimate ? <CheckCircle size={40} className="email-legitimate-icon" /> : <FaExclamationTriangle size={40} className="email-alert-icon" />;
     const progressBarColor = getProgressBarColor(percentage);
 
     return (
@@ -177,24 +177,18 @@ const EmailViewPage = () => {
                 ) : scanResult && (
                     <div className={`email-scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
                         <div className="email-result-icon">{icon}</div>
-                        <div className="email-result-text">
+                        <div className="email-result-text-container">
                             <span className="email-result-percentage">Risk Score: {percentage}% Phishing</span>
                             {aiAnalysisScore !== null && (
                                 <span className="ai-analysis-note">(Updated by AI Analysis)</span>
                             )}
-                        </div>
-                        <div className="email-progress-bar">
-                            <div
-                                className="email-progress-bar-fill"
-                                style={{ width: `${percentage}%`, backgroundColor: progressBarColor }}
-                            ></div>
-                        </div>
-                        <div className="email-result-details">
-                            {isLegitimate ? (
-                                <p>This email appears to be legitimate - No phishing indicators found.</p>
-                            ) : (
-                                <p>This email has been flagged as potentially phishing - Proceed with caution.</p>
-                            )}
+                            <p className="email-result-legitimacy">
+                                {isLegitimate ? (
+                                    'This email appears to be legitimate - No phishing indicators found.'
+                                ) : (
+                                    'This email has been flagged as potentially phishing - Proceed with caution.'
+                                )}
+                            </p>
                         </div>
                     </div>
                 )}
