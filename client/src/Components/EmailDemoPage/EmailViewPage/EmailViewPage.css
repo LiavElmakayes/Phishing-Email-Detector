@@ -3,12 +3,16 @@
     overflow-y: auto;
     background-color: white;
     padding: 1rem;
+    position: relative;
+    z-index: 1;
+    height: 100%;
 }
 
 .email-view-content {
     padding: 1rem;
-    height: 100%;
-    overflow-y: auto;
+    min-height: 100%;
+    position: relative;
+    z-index: 1;
 }
 
 .back-button {
@@ -33,6 +37,7 @@
     background-color: white;
     border-radius: 0.5rem;
     padding: 1.5rem;
+    padding-top: 0.2rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -149,4 +154,35 @@
     color: #666;
     margin-left: 10px;
     font-style: italic;
+}
+
+.start-chat-top-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #0084ff, #00b4ff);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 1rem auto;
+    box-shadow: 0 4px 12px rgba(0, 132, 255, 0.2);
+    width: fit-content;
+}
+
+.start-chat-top-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 132, 255, 0.3);
+}
+
+.start-chat-top-button svg {
+    transition: transform 0.3s ease;
+}
+
+.start-chat-top-button:hover svg {
+    transform: scale(1.1);
 }

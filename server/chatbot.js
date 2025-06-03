@@ -68,9 +68,55 @@ BEHAVIOR RULES:
 4. Ask only ONE question at a time
 5. Keep explanations simple and non-technical
 6. After all questions are answered, provide a summary and calculate a new phishing risk score
-7. Use plain text only - no markdown formatting, no asterisks, no bold text
+7. Always maintain a professional and clear communication style
 8. Generate contextual questions based on the email content and previous answers
 9. Provide brief analysis before each question
+
+FORMATTING GUIDELINES:
+- Use # for main headings
+- Use ## for subheadings
+- Use ### for section headings
+- Use **text** for bold text
+- Use __text__ for underlined text
+- Use [color=color_name]text[/color] for colored text (e.g., [color=red]warning[/color])
+- Use bullet points for lists
+- Use proper spacing between sections
+
+Example of well-formatted first message:
+# Email Security Analysis
+
+Hi there! I'm your email security assistant. I'll help you check if this email is safe.
+
+## Initial Observations
+I notice this email claims to be from **Coinbase** but comes from an unusual domain ([color=red]firesonic.ca[/color]).
+
+## Question
+Were you expecting any transaction notifications from Coinbase recently?
+
+Example of well-formatted follow-up:
+## Analysis Update
+Thanks for your answer. I see this email is about account activity, which is a common phishing tactic.
+
+## Concerns
+- The sender's address looks unusual for Coinbase
+- The domain [color=red]firesonic.ca[/color] is not associated with Coinbase
+- The email contains urgent language
+
+## Question
+Have you received any legitimate emails from this address before?
+
+Example of well-formatted summary:
+# Final Analysis
+
+## Key Findings
+1. The email was unexpected
+2. The sender's address is suspicious
+3. It uses urgent language
+4. Contains suspicious links
+5. Requests immediate action
+
+## Risk Assessment
+Taking into account the SpamAssassin score and your responses, I calculate a phishing risk score of [color=red]85%[/color]. This email shows multiple signs of being a phishing attempt and should be treated with caution.
 
 EMAIL CONTEXT:
 - Subject: "${emailSubject}"
@@ -104,36 +150,7 @@ PHISHING RISK SCORE CALCULATION:
    - Requests personal info: +25%
    - Suspicious links or attachments: +20%
    - Mismatched sender/company: +15%
-3. Final score should be between 0-100%
-
-RESPONSE GUIDELINES:
-- Use the greeting ONLY in the first message
-- For follow-up questions, use simple transitions
-- Ask only ONE question
-- Wait for user's response before asking the next question
-- Explain concerns in simple terms
-- Use examples that non-technical users can understand
-- End with a clear summary and risk score
-- Use plain text only - no formatting
-- Generate questions based on context, not a fixed list
-
-Example responses:
-First message:
-"Hi there! I'm your email security assistant. I'll help you check if this email is safe. I notice this email claims to be from Microsoft but has a high spam score. Let me ask you: Were you expecting any account activity notifications from Microsoft recently?"
-
-Follow-up messages:
-"Thanks for your answer. I see this email is about account activity, which is a common phishing tactic. The sender's address looks unusual for Microsoft. Have you received any legitimate emails from this address before?"
-
-"I notice the email mentions 'urgent action required' in the subject. This is often used in phishing attempts to create pressure. Does the email ask you to click any links or download anything?"
-
-Final summary:
-"Based on our analysis, here's what I found:
-1. The email was unexpected
-2. The sender's address is suspicious
-3. It uses urgent language
-4. Contains suspicious links
-5. Requests immediate action
-Taking into account the SpamAssassin score and your responses, I calculate a phishing risk score of 85%. This email shows multiple signs of being a phishing attempt and should be treated with caution."`
+3. Final score should be between 0-100%`
             }
         ];
 
@@ -162,7 +179,7 @@ Taking into account the SpamAssassin score and your responses, I calculate a phi
                 model: 'deepseek/deepseek-chat-v3-0324:free',
                 messages: messages,
                 temperature: 0.3,
-                max_tokens: 200,
+                max_tokens: 1000,
                 top_p: 0.9,
                 frequency_penalty: 0.5,
                 presence_penalty: 0.5

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { FaShieldAlt, FaExclamationTriangle } from 'react-icons/fa';
@@ -14,6 +14,8 @@ const EmailViewPage = () => {
     const [scanResult, setScanResult] = useState(null);
     const [isScanning, setIsScanning] = useState(false);
     const [aiAnalysisScore, setAiAnalysisScore] = useState(null);
+    const [isChatStarted, setIsChatStarted] = useState(false);
+    const chatbotRef = useRef(null);
 
     useEffect(() => {
         const fetchEmail = async () => {
@@ -126,6 +128,14 @@ const EmailViewPage = () => {
         setAiAnalysisScore(newScore);
     };
 
+    const handleStartChat = () => {
+        setIsChatStarted(true);
+        // Smooth scroll to chatbot after a short delay to ensure it's rendered
+        setTimeout(() => {
+            chatbotRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
+
     if (!id) {
         return null;
     }
@@ -163,7 +173,6 @@ const EmailViewPage = () => {
     const percentage = aiAnalysisScore !== null ? aiAnalysisScore : (scanResult ? (scanResult.result || 0) * 10 : 0);
     const isLegitimate = aiAnalysisScore !== null ? aiAnalysisScore < 50 : (scanResult ? scanResult.legitimacy === 'Legitimate' : false);
     const icon = isLegitimate ? <CheckCircle size={40} className="email-legitimate-icon" /> : <FaExclamationTriangle size={40} className="email-alert-icon" />;
-    const progressBarColor = getProgressBarColor(percentage);
 
     return (
         <div className="email-view-content">
@@ -175,22 +184,31 @@ const EmailViewPage = () => {
                 {isScanning ? (
                     <div className="scanning-message">Scanning email for phishing indicators...</div>
                 ) : scanResult && (
-                    <div className={`email-scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
-                        <div className="email-result-icon">{icon}</div>
-                        <div className="email-result-text-container">
-                            <span className="email-result-percentage">Risk Score: {percentage}% Phishing</span>
-                            {aiAnalysisScore !== null && (
-                                <span className="ai-analysis-note">(Updated by AI Analysis)</span>
-                            )}
-                            <p className="email-result-legitimacy">
-                                {isLegitimate ? (
-                                    'This email appears to be legitimate - No phishing indicators found.'
-                                ) : (
-                                    'This email has been flagged as potentially phishing - Proceed with caution.'
+                    <>
+                        <div className={`email-scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
+                            <div className="email-result-icon">{icon}</div>
+                            <div className="email-result-text-container">
+                                <span className="email-result-percentage">Risk Score: {percentage}% Phishing</span>
+                                {aiAnalysisScore !== null && (
+                                    <span className="ai-analysis-note">(Updated by AI Analysis)</span>
                                 )}
-                            </p>
+                                <p className="email-result-legitimacy">
+                                    {isLegitimate ? (
+                                        'This email appears to be legitimate - No phishing indicators found.'
+                                    ) : (
+                                        'This email has been flagged as potentially phishing - Proceed with caution.'
+                                    )}
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                        <button
+                            className="start-chat-top-button"
+                            onClick={handleStartChat}
+                        >
+                            <FaShieldAlt size={20} />
+                            Start Chat with AI Assistant
+                        </button>
+                    </>
                 )}
 
                 <h1 className="email-subject">{email.subject}</h1>
@@ -206,25 +224,28 @@ const EmailViewPage = () => {
                 <div className="email-body" dangerouslySetInnerHTML={{ __html: email.content }} />
 
                 {email && scanResult && (
-                    <ChatBot
-                        email={{
-                            subject: email.subject || '',
-                            sender: email.sender || '',
-                            content: email.content || '',
-                            metadata: {
-                                scanResult: scanResult.result || 0,
-                                legitimacy: scanResult.legitimacy || 'Unknown',
-                                spamAssassinScore: scanResult.result || 0,
-                                spamAssassinDetails: scanResult.details || {},
-                                rawScanResult: scanResult.raw || {}
-                            }
-                        }}
-                        initialScanResult={{
-                            result: scanResult.result || 0,
-                            legitimacy: scanResult.legitimacy || 'Unknown'
-                        }}
-                        onNewAnalysis={handleNewAnalysis}
-                    />
+                    <div ref={chatbotRef}>
+                        <ChatBot
+                            email={{
+                                subject: email.subject || '',
+                                sender: email.sender || '',
+                                content: email.content || '',
+                                metadata: {
+                                    scanResult: scanResult.result || 0,
+                                    legitimacy: scanResult.legitimacy || 'Unknown',
+                                    spamAssassinScore: scanResult.result || 0,
+                                    spamAssassinDetails: scanResult.details || {},
+                                    rawScanResult: scanResult.raw || {}
+                                }
+                            }}
+                            initialScanResult={{
+                                result: scanResult.result || 0,
+                                legitimacy: scanResult.legitimacy || 'Unknown'
+                            }}
+                            onNewAnalysis={handleNewAnalysis}
+                            isStarted={isChatStarted}
+                        />
+                    </div>
                 )}
             </div>
         </div>
