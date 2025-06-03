@@ -156,7 +156,6 @@
     position: relative;
     min-width: 0;
     width: calc(100% - 3.5rem);
-    /* Take up all space except right sidebar */
 }
 
 .header-container {
@@ -196,7 +195,7 @@
 
 .email-list-container {
     flex: 1;
-    overflow: hidden;
+    overflow-y: auto;
     display: flex;
     margin: 0;
     padding: 0;
@@ -204,6 +203,8 @@
     border-right: 1px solid #e5e7eb;
     background-color: #ffffff;
     min-width: 0;
+    height: calc(100% - 10rem);
+    /* Account for header, toolbar, and tabs */
 }
 
 .right-sidebar-container {

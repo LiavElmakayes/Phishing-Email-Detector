@@ -27,27 +27,100 @@
     max-width: 85%;
     padding: 16px 20px;
     border-radius: 16px;
-    line-height: 1.5;
+    line-height: 1.6;
     word-wrap: break-word;
-    font-size: 15px;
+    font-size: 1rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     animation: messageAppear 0.3s ease-out;
     position: relative;
-    white-space: normal;
+    white-space: pre-wrap;
     overflow-wrap: break-word;
     word-break: break-word;
 }
 
-@keyframes messageAppear {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
+.message h1:first-child {
+    margin-top: 0.4em;
+}
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.message h2:first-child {
+    margin-top: 0.4em;
+}
+
+.message h3:first-child {
+    margin-top: 0.3em;
+}
+
+.message h4:first-child {
+    margin-top: 0.2em;
+}
+
+.message h1 {
+    font-size: 1.8em;
+    margin: 0.4em 0 0.4em;
+    font-weight: 700;
+    color: #1a1a1a;
+    border-bottom: 2px solid #767676;
+    padding-bottom: 0.3em;
+}
+
+.message h2 {
+    font-size: 1.4em;
+    margin: 0.4em 0 0.4em;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.message h3 {
+    font-size: 1.2em;
+    margin: 0.3em 0 0.3em;
+    font-weight: 600;
+    color: #34495e;
+}
+
+.message h4 {
+    font-size: 1.1em;
+    margin: 0.2em 0 0.2em;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.message strong {
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.message u {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+}
+
+.message ul {
+    margin: 0;
+    padding: 0 0 0 1.8em;
+    list-style-type: none;
+}
+
+.message li {
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.message li::before {
+    content: "●";
+    position: absolute;
+    left: -1.2em;
+    font-size: 1.1em;
+    line-height: 1;
+    color: #000000;
+}
+
+.message span[style*="color"] {
+    font-weight: 600;
 }
 
 .message.user {
@@ -59,11 +132,17 @@
 }
 
 .message.assistant {
-    align-self: flex-start;
     background: white;
     color: #1a1a1a;
     border-bottom-left-radius: 4px;
     margin-right: 20%;
+}
+
+.message.assistant h1,
+.message.assistant h2,
+.message.assistant h3,
+.message.assistant h4 {
+    color: #0084ff;
 }
 
 .message.welcome {
@@ -74,6 +153,29 @@
     max-width: 90%;
     margin: 0 auto;
     align-self: center;
+}
+
+.message.welcome ul {
+    display: inline-block;
+    text-align: left;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.message.welcome li {
+    text-align: left;
+    margin: 0.2em 0;
+    padding-left: 1.2em;
+    position: relative;
+}
+
+.message.welcome li::before {
+    content: "●";
+    position: absolute;
+    left: 0;
+    font-size: 1.1em;
+    line-height: 1;
+    color: #1565c0;
 }
 
 .message.question {
@@ -328,4 +430,71 @@
     width: 100%;
     height: 1px;
     background: rgba(0, 0, 0, 0.05);
+}
+
+.chatbot-initial-state {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    padding: 20px;
+}
+
+.chatbot-welcome-card {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    animation: cardAppear 0.5s ease-out;
+}
+
+.chatbot-welcome-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 24px;
+}
+
+.chatbot-welcome-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.chatbot-welcome-card h2 {
+    color: #1a1a1a;
+    font-size: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.chatbot-welcome-card p {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+@keyframes cardAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-timestamp {
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 4px;
+    text-align: right;
+    opacity: 0.8;
+}
+
+.message.user .message-timestamp {
+    color: rgba(255, 255, 255, 0.8);
 }
