@@ -101,29 +101,6 @@ const EmailViewPage = () => {
         }
     };
 
-    const getProgressBarColor = (percentage) => {
-        let r, g, b;
-
-        if (percentage <= 25) {
-            const ratio = percentage / 25;
-            r = Math.round(0 + (76 - 0) * ratio);
-            g = Math.round(200 + (175 - 200) * ratio);
-            b = Math.round(0 + (80 - 0) * ratio);
-        } else if (percentage <= 50) {
-            const ratio = (percentage - 25) / 25;
-            r = Math.round(76 + (255 - 76) * ratio);
-            g = Math.round(175 + (152 - 175) * ratio);
-            b = Math.round(80 + (0 - 80) * ratio);
-        } else {
-            const ratio = (percentage - 50) / 50;
-            r = Math.round(255 + (244 - 255) * ratio);
-            g = Math.round(152 + (67 - 152) * ratio);
-            b = Math.round(0 + (54 - 0) * ratio);
-        }
-
-        return `rgb(${r}, ${g}, ${b})`;
-    };
-
     const handleNewAnalysis = (newScore) => {
         setAiAnalysisScore(newScore);
     };

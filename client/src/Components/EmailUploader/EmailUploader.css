@@ -4,7 +4,7 @@
     align-items: center;
     justify-content: center;
     background-color: rgb(255, 255, 255);
-    border: 2px solid #ccc;
+    border: 2px solid #b8c2eb;
     border-radius: 8px;
     padding: clamp(30px, 6vw, 60px);
     width: min(95%, 60rem);

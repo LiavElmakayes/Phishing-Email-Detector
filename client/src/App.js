@@ -6,6 +6,7 @@ import ScanResult from './Components/ScanResult/ScanResult';
 import ChatbotPopup from './Components/ChatbotPopup/ChatbotPopup';
 import EmailDemoPage from './Components/EmailDemoPage/EmailDemoPage';
 import EmailHistory from './Components/EmailHistory/EmailHistory';
+import ChatHistory from './Components/ChatHistory/ChatHistory';
 import Auth from './Auth/AuthPage/Auth';
 import './App.css';
 import NavBar from './Components/NavBar/NavBar';
@@ -93,6 +94,10 @@ function App() {
             <Route
               path="/history"
               element={user ? <EmailHistory /> : <Navigate to="/auth" replace />}
+            />
+            <Route
+              path="/chat-history"
+              element={user ? <ChatHistory /> : <Navigate to="/auth" replace />}
             />
             <Route
               path="*"

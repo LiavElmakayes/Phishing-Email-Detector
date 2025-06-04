@@ -1,6 +1,7 @@
 import React from 'react'
 import './NavBar.css'
 import { MdOutlineSecurity } from "react-icons/md";
+import { FaComments } from "react-icons/fa";
 import { Link, NavLink } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase';
@@ -39,6 +40,9 @@ const NavBar = () => {
                         </NavLink>
                         <NavLink to="/history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                             Scan History
+                        </NavLink>
+                        <NavLink to="/chat-history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                            <FaComments className="nav-icon" /> Chat History
                         </NavLink>
                         <NavLink to="/demo" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                             Email Demo

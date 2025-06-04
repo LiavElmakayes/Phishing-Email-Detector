@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ref, push, set } from 'firebase/database';
+import { database } from '../../firebase';
+import { useSelector } from 'react-redux';
 import './ChatBot.css';
 
-const ChatBot = ({ email, initialScanResult, onNewAnalysis, isStarted }) => {
+const ChatBot = ({ email, initialScanResult, onNewAnalysis, isStarted, aiAnalysisScore }) => {
     const [messages, setMessages] = useState([]);
     const [userInput, setUserInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [isActive, setIsActive] = useState(false);
+    const [chatId, setChatId] = useState(null);
+    const user = useSelector((state) => state.AuthReducer.user);
 
     const formatMessage = (content) => {
         if (!content) return '';
@@ -50,12 +55,136 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis, isStarted }) => {
         return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    // Unified function to get the latest analysis result
+    const getLatestAnalysisResult = useCallback(() => {
+        console.log('ChatBot: Calculating latest analysis result...');
+        console.log('  aiAnalysisScore (prop):', aiAnalysisScore);
+        console.log('  initialScanResult (prop):', initialScanResult);
+
+        // Prioritize AI score if available (AI score is 0-100)
+        let score = null;
+        if (aiAnalysisScore !== null && typeof aiAnalysisScore === 'number') {
+            score = aiAnalysisScore;
+        } else if (initialScanResult?.result !== undefined && typeof initialScanResult.result === 'number') {
+            // Use initial scan result, scaling it from 0-10 to 0-100 for consistency
+            score = initialScanResult.result * 10;
+        }
+        // If neither is a valid number, score remains null
+
+        // Determine legitimacy based on the calculated score
+        const legitimacy = score !== null
+            ? (score < 50 ? 'Legitimate' : 'Phishing')
+            : initialScanResult?.legitimacy || 'Unknown';
+
+        // Prepare the result value to be saved (scaled back to 0-10)
+        // Ensure resultValue is always a number.
+        let resultValue = 0;
+        if (score !== null && typeof score === 'number') {
+            resultValue = parseFloat((score / 10).toFixed(1));
+        } else if (initialScanResult?.result !== undefined && typeof initialScanResult.result === 'number') {
+            // If AI score wasn't available, use the original initial scan result (0-10)
+            resultValue = initialScanResult.result;
+        }
+        // If neither is a valid number, resultValue remains 0
+
+        console.log('  Calculated score (0-100):', score);
+        console.log('  Derived legitimacy:', legitimacy);
+        console.log('  Final resultValue (0-10) for saving:', resultValue);
+
+        return {
+            result: resultValue, // Ensure this is always a number
+            legitimacy: legitimacy,
+            details: initialScanResult?.details || null,
+            raw: initialScanResult?.raw || null
+        };
+    }, [aiAnalysisScore, initialScanResult]);
+
+    const saveChatToFirebase = useCallback(async (messagesToSave, currentChatId) => {
+        if (!user || !email || !currentChatId) {
+            console.error('Save to Firebase failed: Missing user, email, or chatId.', { user: !!user, email: !!email, currentChatId });
+            return;
+        }
+        // console.log('Attempting to save chat', currentChatId, 'with', messagesToSave.length, 'messages.');
+
+        try {
+            // Reference to the specific chat entry using the provided currentChatId
+            const chatEntryRef = ref(database, `users/${user.uid}/chatHistory/${currentChatId}`);
+
+            // Get the most up-to-date analysis result
+            const latestAnalysis = getLatestAnalysisResult();
+
+            // Create a safe chat data object with fallbacks for missing properties
+            const chatData = {
+                emailId: email.id || 'unknown',
+                emailSubject: email.subject || 'No Subject',
+                emailSender: email.sender || 'Unknown Sender',
+                messages: messagesToSave.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                    type: msg.type,
+                    timestamp: msg.timestamp
+                })),
+                timestamp: new Date().toISOString(), // Always update timestamp on save
+                scanResult: latestAnalysis // Save the latest analysis result
+            };
+
+            // Optional: Validate that no undefined values exist in the data
+            const hasUndefined = Object.entries(chatData).some(([key, value]) => {
+                if (value === undefined) {
+                    console.error(`Undefined value found in chatData for key: ${key}`);
+                    return true;
+                }
+                // Recursively check nested objects/arrays if necessary
+                if (typeof value === 'object' && value !== null) {
+                    return Object.values(value).some(nestedValue => nestedValue === undefined);
+                }
+                return false;
+            });
+
+            if (hasUndefined) {
+                console.error('Chat data contains undefined values:', chatData);
+                throw new Error('Cannot save chat: data contains undefined values');
+            }
+
+            // Save/Update the chat entry
+            await set(chatEntryRef, chatData);
+            // console.log('Chat saved successfully with ID:', currentChatId);
+
+        } catch (error) {
+            console.error('Error saving chat:', error);
+            // Avoid adding error message to state here to prevent save loop
+            // Optionally save a minimal error state if needed for debugging history
+        }
+    }, [user, email, getLatestAnalysisResult]);
+
     const startChat = useCallback(async () => {
-        if (isActive) return;
+        if (isActive) return; // Prevent starting if already active
+
         setIsActive(true);
         setIsTyping(true);
 
         try {
+            // Create the initial chat entry reference *before* the first API call
+            const chatRef = ref(database, `users/${user.uid}/chatHistory`);
+            const newChatRef = push(chatRef);
+            const newChatId = newChatRef.key;
+            setChatId(newChatId); // Set the chat ID for this conversation state
+            // console.log('New chat ID generated:', newChatId);
+
+            // Initial save for the new chat entry with basic info
+            // This save is important to create the entry in Firebase immediately
+            const initialChatData = {
+                emailId: email.id || 'unknown',
+                emailSubject: email.subject || 'No Subject',
+                emailSender: email.sender || 'Unknown Sender',
+                messages: [], // Start with empty messages
+                timestamp: new Date().toISOString(),
+                scanResult: getLatestAnalysisResult() // Save initial scan result
+            };
+            await set(newChatRef, initialChatData); // Use set with the new ref for initial save
+            // console.log('Initial chat entry created with ID:', newChatId);
+
+            // Initial message to the API
             const response = await fetch('http://localhost:5000/api/chat', {
                 method: 'POST',
                 headers: {
@@ -74,36 +203,81 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis, isStarted }) => {
                 throw new Error(data.error || 'Failed to start chat');
             }
 
-            setMessages([
-                {
-                    role: 'assistant',
-                    content: formatMessage(data.response || "Hi! I'm your AI assistant. How can I help you today?"),
-                    type: 'welcome',
-                    timestamp: formatTime()
-                }
-            ]);
+            const initialMessage = {
+                role: 'assistant',
+                content: formatMessage(data.response || "Hi! I'm your AI assistant. How can I help you today?"),
+                type: 'welcome',
+                timestamp: formatTime()
+            };
+
+            // Update messages and save the first assistant message
+            const messagesAfterStart = [initialMessage];
+            setMessages(messagesAfterStart);
+
+            // Save the state after the first assistant message using the established chatId
+            // This save is now handled by the useEffect watching 'messages' and 'chatId'
+            // await saveChatToFirebase(messagesAfterStart, newChatId);
 
         } catch (error) {
             console.error('Error in startChat:', error);
             setMessages([{
                 role: 'assistant',
-                content: formatMessage(`Sorry, I'm having trouble starting the chat. Please try again.`),
+                content: formatMessage(`Sorry, I'm having trouble starting the chat. Please try again. ${error.message}`),
                 type: 'error',
                 timestamp: formatTime()
             }]);
+            // Attempt to save the error state if chatId was set
+            if (chatId) {
+                // This save is now handled by the useEffect watching 'messages' and 'chatId'
+                // await saveChatToFirebase(messages, chatId);
+            }
         } finally {
             setIsTyping(false);
         }
-    }, [isActive, email]);
+    }, [isActive, email, user, getLatestAnalysisResult, chatId]);
 
     useEffect(() => {
         if (isStarted && !isActive) {
             startChat();
+        } else if (!isStarted && isActive && chatId) {
+            // When chat is closed/inactive, save the final state.
+            // This save is now handled by the useEffect watching 'messages' and 'chatId'
+            // saveChatToFirebase(messages, chatId); 
         }
-    }, [isStarted, isActive, startChat]);
+    }, [isStarted, isActive, startChat, chatId, messages, saveChatToFirebase]);
+
+    // Effect to save chat whenever messages or the AI analysis score changes
+    // This effect ensures ongoing saves as the conversation progresses and analysis updates.
+    // Debounce the save operation to avoid excessive writes during rapid message changes
+    useEffect(() => {
+        // Save the chat whenever messages or aiAnalysisScore updates,
+        // but only after the chat has been started (chatId is set)
+        // and there are messages to save.
+        if (chatId && messages.length > 0) {
+            // console.log('Messages or AI score changed, triggering save...', { chatId, messagesLength: messages.length, aiScore: aiAnalysisScore });
+            const handler = setTimeout(() => {
+                saveChatToFirebase(messages, chatId);
+            }, 500); // Save after 500ms of inactivity
+
+            return () => clearTimeout(handler); // Cleanup timeout on dependency change
+        }
+        // console.log('Save useEffect dependencies changed, but not saving.', { chatId, messagesLength: messages.length, aiScore: aiAnalysisScore });
+
+    }, [messages, aiAnalysisScore, chatId, saveChatToFirebase]);
 
     const handleSendMessage = async () => {
-        if (!userInput.trim()) return;
+        if (!userInput.trim() || isTyping) return; // Prevent sending empty or while typing
+        if (!chatId) {
+            console.error('Cannot send message: Chat ID not set. Start chat first.');
+            // Handle case where chatId is somehow not set (should not happen after startChat)
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: formatMessage('Sorry, there was an internal error. Please try starting a new chat.'),
+                type: 'error',
+                timestamp: formatTime()
+            }]);
+            return;
+        }
 
         const userMessage = {
             role: 'user',
@@ -112,9 +286,13 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis, isStarted }) => {
             timestamp: formatTime()
         };
 
-        setMessages(prev => [...prev, userMessage]);
+        // Optimistically update messages immediately
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
         setUserInput('');
         setIsTyping(true);
+
+        // A save will be triggered by the useEffect due to messages changing
 
         try {
             const response = await fetch('http://localhost:5000/api/chat', {
@@ -124,7 +302,7 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis, isStarted }) => {
                 },
                 body: JSON.stringify({
                     message: userInput,
-                    conversation: messages,
+                    conversation: messages, // Send previous messages + user's new message
                     email: email
                 })
             });
@@ -135,21 +313,43 @@ const ChatBot = ({ email, initialScanResult, onNewAnalysis, isStarted }) => {
                 throw new Error(data.error || 'Failed to process response');
             }
 
-            setMessages(prev => [...prev, {
+            const assistantMessage = {
                 role: 'assistant',
-                content: formatMessage(data.response),
+                content: formatMessage(data.response), // Ensure formatMessage is applied
                 type: 'message',
                 timestamp: formatTime()
-            }]);
+            };
+
+            // Update messages with assistant response
+            const updatedMessages = [...newMessages, assistantMessage];
+            setMessages(updatedMessages);
+
+            // Check if the assistant's message contains the final analysis score
+            const finalScoreMatch = data.response.match(/calculate this email has a (\d+)% probability/);
+            if (finalScoreMatch && finalScoreMatch[1]) {
+                const finalScore = parseInt(finalScoreMatch[1], 10);
+                if (!isNaN(finalScore) && onNewAnalysis) {
+                    console.log('ChatBot: Detected final AI score', finalScore, 'calling onNewAnalysis...');
+                    onNewAnalysis(finalScore); // Call the prop function with the final score
+                }
+            }
+
+            // A save will be triggered by the useEffect due to messages changing
 
         } catch (error) {
             console.error('Error in handleSendMessage:', error);
-            setMessages(prev => [...prev, {
+            const errorMessage = {
                 role: 'assistant',
-                content: formatMessage(`Sorry, I'm having trouble processing your response. Please try again.`),
+                content: formatMessage(`Sorry, I'm having trouble processing your response. Please try again. ${error.message}`),
                 type: 'error',
                 timestamp: formatTime()
-            }]);
+            };
+            const updatedMessages = [...newMessages, errorMessage];
+            setMessages(updatedMessages);
+            // Attempt to save the error state
+            if (chatId) {
+                // A save will be triggered by the useEffect due to messages changing
+            }
         } finally {
             setIsTyping(false);
         }

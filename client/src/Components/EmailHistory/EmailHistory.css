@@ -39,6 +39,7 @@
     flex: 1;
     min-width: 200px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid #b8c2eb;
 }
 
 .stat-card:hover {
@@ -47,32 +48,37 @@
 }
 
 .stat-icon {
-    font-size: 2.5rem;
+    font-size: 1.8rem;
     padding: 0.8rem;
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 1.5px solid;
 }
 
-.total-scans-icon {
-    background-color: #e8f0fe;
-    color: #3498db;
+.stat-icon.total-scans-icon {
+    background-color: rgba(0, 132, 255, 0.1);
+    color: #0084ff;
+    border-color: #0084ff;
 }
 
-.legitimate-icon {
-    background-color: #e8ffee;
+.stat-icon.legitimate-icon {
+    background-color: rgba(76, 175, 80, 0.1);
     color: #4CAF50;
+    border-color: #4CAF50;
 }
 
-.suspicious-icon {
-    background-color: #fff3f3;
+.stat-icon.suspicious-icon {
+    background-color: rgba(244, 67, 54, 0.1);
     color: #F44336;
+    border-color: #F44336;
 }
 
-.average-risk-icon {
+.stat-icon.average-risk-icon {
     background-color: #f3e5f5;
     color: #9c27b0;
+    border-color: #9c27b0;
 }
 
 .stat-info {
@@ -94,7 +100,7 @@
 /* Updated Search and Filter Bar - Unified Card Design */
 .filter-bar {
     background: white;
-    border: 2px solid #e0e0e0;
+    border: 2px solid #b8c2eb;
     border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
@@ -173,6 +179,7 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
+    border: 2px solid #b8c2eb;
 }
 
 .history-card:hover {

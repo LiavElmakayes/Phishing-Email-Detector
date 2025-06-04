@@ -4,7 +4,7 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #f3f3f3;
+  background: linear-gradient(135deg, #d9ddee, #a1cfd4a7);
   overflow-x: hidden;
 }
 
