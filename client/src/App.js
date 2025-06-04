@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import EmailUploader from './Components/EmailUploader/EmailUploader';
 import ScanResult from './Components/ScanResult/ScanResult';
-import ChatbotPopup from './Components/ChatbotPopup/ChatbotPopup';
 import EmailDemoPage from './Components/EmailDemoPage/EmailDemoPage';
 import EmailHistory from './Components/EmailHistory/EmailHistory';
 import ChatHistory from './Components/ChatHistory/ChatHistory';
@@ -18,7 +17,6 @@ import { setUser } from './store/AuthReducer';
 
 function App() {
   const [scanResult, setScanResult] = useState(null);
-  const [showChatbot, setShowChatbot] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const dispatch = useDispatch();
@@ -50,11 +48,6 @@ function App() {
       ...result,
       filename: result.filename || 'Unknown File'
     });
-    setTimeout(() => setShowChatbot(true), 1000);
-  };
-
-  const closeChatbot = () => {
-    setShowChatbot(false);
   };
 
   if (loading) {
@@ -73,7 +66,6 @@ function App() {
                 <>
                   <EmailUploader onScanResult={handleScanResult} />
                   {scanResult && <ScanResult {...scanResult} />}
-                  {showChatbot && <ChatbotPopup onClose={closeChatbot} />}
                 </>
               ) : (
                 <Navigate to="/auth" replace />

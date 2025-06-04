@@ -149,31 +149,79 @@ app.get('/emails/:id/raw', (req, res) => {
     }
 });
 
-app.post('/analyze', upload.single('emlFile'), (req, res) => {
+app.post('/analyze', upload.single('emlFile'), async (req, res) => {
     // Ensure the file path is in WSL-compatible format with forward slashes
     const filePath = path.join(__dirname, req.file.path).replace(/\\/g, '/');
 
     console.log('File Path:', filePath);  // Debugging: log the file path
 
     // Check if the uploaded file exists
-    fs.access(filePath, fs.constants.F_OK, (err) => {
+    fs.access(filePath, fs.constants.F_OK, async (err) => {
         if (err) {
             console.error('File does not exist:', filePath);  // Log the error with file path
             return res.status(500).json({ error: 'File does not exist' });
         }
 
-        // Use spamassassin to analyze the uploaded .eml file
-        exec(`spamassassin < "${filePath}"`, (error, stdout, stderr) => {
-            if (error) {
-                return res.status(500).json({ error: stderr });
+        try {
+            // First, parse the .eml file to get email details
+            const emlContent = fs.readFileSync(filePath);
+            const parsed = await simpleParser(emlContent);
+
+            // Extract sender domain from the email address
+            const senderEmail = parsed.from?.value?.[0]?.address || '';
+            const senderDomain = senderEmail.split('@')[1] || 'Unknown domain';
+
+            // Clean up the content
+            let cleanContent = '';
+            if (parsed.text) {
+                // If we have plain text, use that
+                cleanContent = parsed.text;
+            } else if (parsed.html) {
+                // If we only have HTML, strip HTML tags and decode entities
+                cleanContent = parsed.html
+                    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+                    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+                    .replace(/&amp;/g, '&') // Replace &amp; with &
+                    .replace(/&lt;/g, '<') // Replace &lt; with <
+                    .replace(/&gt;/g, '>') // Replace &gt; with >
+                    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+                    .trim(); // Remove leading/trailing whitespace
             }
 
-            // Parse the result - assuming stdout is a plain number or text
-            console.log('SpamAssassin Output:', stdout);  // Log the full output
+            // Use spamassassin to analyze the uploaded .eml file
+            exec(`spamassassin < "${filePath}"`, (error, stdout, stderr) => {
+                if (error) {
+                    return res.status(500).json({ error: stderr });
+                }
 
-            const result = parseSpamassassinResult(stdout); // Use the function to parse the output
-            res.json(result);
-        });
+                // Parse the result - assuming stdout is a plain number or text
+                console.log('SpamAssassin Output:', stdout);  // Log the full output
+
+                const result = parseSpamassassinResult(stdout); // Use the function to parse the output
+
+                // Combine SpamAssassin result with email details
+                const response = {
+                    ...result,
+                    subject: parsed.subject || 'No subject',
+                    senderDomain: senderDomain,
+                    content: cleanContent || 'No content available',
+                    emailData: {
+                        subject: parsed.subject || 'No subject',
+                        senderDomain: senderDomain,
+                        content: cleanContent || 'No content available'
+                    }
+                };
+
+                console.log('Sending response:', JSON.stringify(response, null, 2));
+                res.json(response);
+            });
+        } catch (error) {
+            console.error('Error processing email:', error);
+            res.status(500).json({
+                error: 'Failed to process email',
+                details: error.message
+            });
+        }
     });
 });
 

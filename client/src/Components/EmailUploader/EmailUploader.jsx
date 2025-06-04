@@ -10,10 +10,22 @@ const EmailUploader = ({ onScanResult }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [showScrollPrompt, setShowScrollPrompt] = useState(false);
     const fileInputRef = useRef(null);
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
     const user = useSelector((state) => state.AuthReducer.user);
+
+    const scrollToResults = () => {
+        // Wait a short moment for the scan result to be rendered
+        setTimeout(() => {
+            const scanResultElement = document.querySelector('.scan-result');
+            if (scanResultElement) {
+                scanResultElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }, 100); // Small delay to ensure the result is rendered
+    };
 
     const saveScanToHistory = async (scanData) => {
         if (!user) {
@@ -26,13 +38,19 @@ const EmailUploader = ({ onScanResult }) => {
         const scanRef = ref(database, `users/${user.uid}/emailHistory`);
         const newScanRef = push(scanRef);
 
+        // Extract email data from the scan result
+        const emailData = scanData.emailData || {};
+
         const historyEntry = {
             ...scanData,
             scanDate: new Date().toISOString(),
             scanType: 'manual_upload',
             filename: scanData.filename,
             riskLevel: scanData.legitimacy === 'Legitimate' ? 'Low' : 'High',
-            legitimacy: scanData.legitimacy
+            legitimacy: scanData.legitimacy,
+            subject: emailData.subject || scanData.subject || 'No subject',
+            senderDomain: emailData.senderDomain || scanData.senderDomain || 'Unknown domain',
+            emailContent: emailData.content || scanData.content || 'No content available'
         };
 
         console.log('History entry to save:', historyEntry);
@@ -112,16 +130,18 @@ const EmailUploader = ({ onScanResult }) => {
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Received data from backend:', data); // Debug log
                     setIsLoading(false);
                     const scanResult = {
                         ...data,
                         filename: file.name
                     };
+                    console.log('Scan result to be saved:', scanResult); // Debug log
                     onScanResult(scanResult);
                     // Save to Firebase history
                     saveScanToHistory(scanResult);
-                    setShowScrollPrompt(true);
-                    setTimeout(() => setShowScrollPrompt(false), 5000);
+                    // Scroll to results
+                    scrollToResults();
                 })
                 .catch(error => {
                     console.error('Error uploading file:', error);
@@ -141,12 +161,6 @@ const EmailUploader = ({ onScanResult }) => {
 
             <div className="center-upload-area">
                 <div className="upload-area-container">
-                    {showScrollPrompt && (
-                        <div className="scroll-prompt">
-                            <p>Analysis complete! Scroll down to see results</p>
-                            <div className="scroll-arrow">↓</div>
-                        </div>
-                    )}
                     <div
                         className={`upload-area ${isDragging ? 'drag-active' : ''} ${isLoading ? 'loading' : ''} ${error ? 'error' : ''}`}
                         onDragEnter={handleDragEnter}

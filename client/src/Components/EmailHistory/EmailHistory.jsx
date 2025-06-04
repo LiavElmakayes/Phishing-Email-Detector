@@ -294,16 +294,31 @@ const EmailHistory = () => {
                 <div className="scan-modal">
                     <div className="modal-content">
                         <button className="close-button" onClick={() => setSelectedEmail(null)}>×</button>
-                        <h2>Email Content</h2>
+                        <h2>Email Details</h2>
                         <div className="email-content">
                             <div className="email-header">
-                                <p><strong>Filename:</strong> {selectedEmail.filename}</p>
-                                <p><strong>Scan Date:</strong> {new Date(selectedEmail.scanDate).toLocaleString()}</p>
-                                <p><strong>Risk Level:</strong> {((selectedEmail.result || 0) * 10).toFixed(0)}/100</p>
-                                <p><strong>Status:</strong> {selectedEmail.legitimacy}</p>
+                                <div className="email-info-row">
+                                    <span className="info-label">Filename:</span>
+                                    <span className="info-value">{selectedEmail.filename}</span>
+                                </div>
+                                <div className="email-info-row">
+                                    <span className="info-label">Subject:</span>
+                                    <span className="info-value">{selectedEmail.subject || 'No subject'}</span>
+                                </div>
+                                <div className="email-info-row">
+                                    <span className="info-label">Sender's Domain:</span>
+                                    <span className="info-value">{selectedEmail.senderDomain || 'Unknown domain'}</span>
+                                </div>
                             </div>
                             <div className="email-body">
-                                <pre>{selectedEmail.emailContent || 'No email content available'}</pre>
+                                <h3>Email Content</h3>
+                                <div className="email-content-text">
+                                    {selectedEmail.emailContent ? (
+                                        <pre>{selectedEmail.emailContent}</pre>
+                                    ) : (
+                                        <p className="no-content">No email content available</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
