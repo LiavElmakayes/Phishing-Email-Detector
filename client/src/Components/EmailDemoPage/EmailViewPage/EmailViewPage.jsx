@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
-import { FaShieldAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaShieldAlt, FaExclamationTriangle, FaExternalLinkAlt } from 'react-icons/fa';
 import ChatBot from '../../ChatBot/ChatBot';
 import './EmailViewPage.css';
 
@@ -113,6 +113,40 @@ const EmailViewPage = () => {
         }, 100);
     };
 
+    // Function to parse and render links in the content
+    const renderEmailContent = (content) => {
+        if (!content) return null;
+
+        // Regular expression to match URLs, excluding both opening and closing brackets
+        const urlRegex = /\[?(https?:\/\/[^\s\]]+)\]?/g;
+
+        // Split the content by URLs and map through the parts
+        const parts = content.split(urlRegex);
+
+        return parts.map((part, index) => {
+            // If this part matches a URL
+            if (part.match(urlRegex)) {
+                // Remove any brackets from the URL
+                const cleanUrl = part.replace(/[\[\]]/g, '');
+                return (
+                    <a
+                        key={index}
+                        href={cleanUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="email-link"
+                        title={`Opens in new tab: ${cleanUrl}`}
+                    >
+                        {cleanUrl}
+                        <FaExternalLinkAlt className="external-link-icon" />
+                    </a>
+                );
+            }
+            // If it's not a URL, return the text as is
+            return part;
+        });
+    };
+
     if (!id) {
         return null;
     }
@@ -198,7 +232,15 @@ const EmailViewPage = () => {
                     </div>
                 </div>
 
-                <div className="email-body" dangerouslySetInnerHTML={{ __html: email.content }} />
+                <div className="email-body">
+                    <div className="email-content-text">
+                        {email.content ? (
+                            <pre>{renderEmailContent(email.content)}</pre>
+                        ) : (
+                            <p className="no-content">No email content available</p>
+                        )}
+                    </div>
+                </div>
 
                 {email && scanResult && (
                     <div ref={chatbotRef}>

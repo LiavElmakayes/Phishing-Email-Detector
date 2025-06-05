@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ref, onValue, query, orderByChild } from "firebase/database";
+import { ref, onValue, query, orderByChild, remove } from "firebase/database";
 import { useSelector } from 'react-redux';
 import { database } from '../../firebase';
-import { FaComments, FaCalendarAlt, FaEnvelope, FaSearch, FaShieldAlt, FaExclamationTriangle, FaRobot, FaCheckCircle, FaTimesCircle, FaChartLine } from 'react-icons/fa';
+import { FaComments, FaCalendarAlt, FaEnvelope, FaSearch, FaShieldAlt, FaExclamationTriangle, FaRobot, FaCheckCircle, FaTimesCircle, FaChartLine, FaTrash } from 'react-icons/fa';
 import { CheckCircle } from 'lucide-react';
 import './ChatHistory.css';
 
@@ -12,6 +12,7 @@ const ChatHistory = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedChat, setSelectedChat] = useState(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState(null);
     const user = useSelector((state) => state.AuthReducer.user);
 
     // Function to extract AI's final analysis score from messages
@@ -121,6 +122,17 @@ const ChatHistory = () => {
             chat.emailSender?.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [chatHistory, searchTerm]);
+
+    const handleDelete = async (chatId) => {
+        try {
+            const historyRef = ref(database, `users/${user.uid}/chatHistory/${chatId}`);
+            await remove(historyRef);
+            setDeleteConfirmation(null);
+        } catch (error) {
+            console.error('Error deleting chat:', error);
+            setError('Failed to delete chat history');
+        }
+    };
 
     if (loading) {
         return (
@@ -315,12 +327,20 @@ const ChatHistory = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <button
-                                    className="chat-view-btn"
-                                    onClick={() => setSelectedChat(chat)}
-                                >
-                                    <FaComments /> View Conversation
-                                </button>
+                                <div className="chat-card-actions">
+                                    <button
+                                        className="chat-view-btn"
+                                        onClick={() => setSelectedChat(chat)}
+                                    >
+                                        <FaComments /> View Conversation
+                                    </button>
+                                    <button
+                                        className="chat-delete-btn"
+                                        onClick={() => setDeleteConfirmation(chat)}
+                                    >
+                                        <FaTrash /> Delete
+                                    </button>
+                                </div>
                             </div>
                         );
                     })}
@@ -346,6 +366,30 @@ const ChatHistory = () => {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmation && (
+                <div className="chat-delete-modal">
+                    <div className="chat-delete-modal-content">
+                        <h3>Delete Chat History</h3>
+                        <p>Are you sure you want to delete this chat history? This action cannot be undone.</p>
+                        <div className="chat-delete-modal-actions">
+                            <button
+                                className="chat-cancel-delete-btn"
+                                onClick={() => setDeleteConfirmation(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="chat-confirm-delete-btn"
+                                onClick={() => handleDelete(deleteConfirmation.id)}
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>

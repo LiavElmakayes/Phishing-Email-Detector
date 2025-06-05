@@ -13,6 +13,9 @@
     min-height: 100%;
     position: relative;
     z-index: 1;
+    width: 100%;
+    margin: 0;
+    max-width: none;
 }
 
 .back-button {
@@ -39,6 +42,7 @@
     padding: 1.5rem;
     padding-top: 0.2rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    width: 100%;
 }
 
 .email-subject {
@@ -56,14 +60,13 @@
     padding-bottom: 1rem;
     border-bottom: 1px solid #e5e7eb;
     width: 100%;
-    min-width: max-content;
 }
 
 .email-sender {
     color: #4b5563;
     font-size: 0.875rem;
-    white-space: nowrap;
     width: 100%;
+    word-break: break-word;
 }
 
 .email-time {
@@ -72,9 +75,73 @@
 }
 
 .email-body {
-    color: #374151;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    width: calc(100% - 2rem);
+    box-sizing: border-box;
+}
+
+.email-content-text {
+    background-color: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.email-content-text pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: inherit;
+    font-size: 0.95rem;
     line-height: 1.6;
-    font-size: 0.875rem;
+    color: #2c3e50;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.email-content-text pre a {
+    display: inline;
+}
+
+.no-content {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px dashed #dee2e6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .email-view-content {
+        padding: 0.5rem;
+    }
+
+    .email-details {
+        padding: 1rem;
+    }
+
+    .email-body {
+        margin: 0 1rem 1.5rem 1rem;
+        width: calc(100% - 2rem);
+    }
+
+    .email-content-text {
+        padding: 1rem;
+    }
+
+    .email-scan-result {
+        width: 100%;
+    }
 }
 
 .loading-message,
@@ -106,7 +173,8 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    width: fit-content;
+    width: 50%;
+    box-sizing: border-box;
 }
 
 .email-scan-result.legitimate {
@@ -160,13 +228,13 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 24px;
+    padding: 1.2rem 4.2rem;
     background: linear-gradient(135deg, #0084ff, #00b4ff);
     color: white;
     border: none;
     border-radius: 12px;
     font-weight: 600;
-    font-size: 15px;
+    font-size: 1.15rem;
     cursor: pointer;
     transition: all 0.3s ease;
     margin: 1rem auto;
@@ -185,4 +253,29 @@
 
 .start-chat-top-button:hover svg {
     transform: scale(1.1);
+}
+
+/* Email Link Styles */
+.email-link {
+    color: #0084ff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.email-link:hover {
+    text-decoration: underline;
+}
+
+.external-link-icon {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.email-link:hover .external-link-icon {
+    opacity: 1;
 }

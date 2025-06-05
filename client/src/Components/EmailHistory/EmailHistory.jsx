@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ref, onValue, query, orderByChild } from "firebase/database";
+import { ref, onValue, query, orderByChild, remove } from "firebase/database";
 import { useSelector } from 'react-redux';
 import { database } from '../../firebase';
-import { FaFileAlt, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaEnvelope, FaChartLine, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaFileAlt, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaEnvelope, FaChartLine, FaSearch, FaFilter, FaGlobe, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
 import './EmailHistory.css';
 
 // Custom Dropdown Component
@@ -88,6 +88,7 @@ const EmailHistory = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All Status');
+    const [deleteConfirmation, setDeleteConfirmation] = useState(null);
     const user = useSelector((state) => state.AuthReducer.user);
 
     useEffect(() => {
@@ -139,6 +140,141 @@ const EmailHistory = () => {
         if (scaledResult <= 33) return '#4CAF50'; // Low risk - Green
         if (scaledResult <= 66) return '#FFC107'; // Medium risk - Yellow
         return '#F44336'; // High risk - Red
+    };
+
+    // Function to parse and render links in the content
+    const renderEmailContent = (content) => {
+        if (!content) return null;
+
+        // Check if content is HTML
+        const isHtml = content.includes('<html') || content.includes('<body') || content.includes('<div');
+
+        if (isHtml) {
+            // Create a temporary div to parse HTML content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+
+            // Process all links in the HTML content
+            const links = tempDiv.getElementsByTagName('a');
+            Array.from(links).forEach(link => {
+                const url = link.href;
+                if (url) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                    link.className = 'history-email-link';
+                    link.title = `Opens in new tab: ${url}`;
+
+                    // Add external link icon
+                    const icon = document.createElement('span');
+                    icon.innerHTML = '<svg class="history-external-link-icon" viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>';
+                    link.appendChild(icon);
+                }
+            });
+
+            // Process all images
+            const images = tempDiv.getElementsByTagName('img');
+            Array.from(images).forEach(img => {
+                img.className = 'history-email-image';
+                // Add alt text if missing
+                if (!img.alt) {
+                    img.alt = 'Email image';
+                }
+                // Add loading="lazy" for better performance
+                img.loading = 'lazy';
+            });
+
+            return (
+                <div
+                    className="history-email-html-content"
+                    dangerouslySetInnerHTML={{ __html: tempDiv.innerHTML }}
+                />
+            );
+        }
+
+        // For plain text content, handle URLs and base64 images
+        const parts = [];
+        let lastIndex = 0;
+
+        // Regular expression to match URLs and base64 images
+        const urlRegex = /(https?:\/\/[^\s\]]+)/g;
+        const base64Regex = /data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/g;
+
+        // Combine both patterns
+        const combinedRegex = new RegExp(`(${urlRegex.source}|${base64Regex.source})`, 'g');
+
+        let match;
+        while ((match = combinedRegex.exec(content)) !== null) {
+            // Add text before the match, removing any trailing brackets
+            if (match.index > lastIndex) {
+                const text = content.slice(lastIndex, match.index).replace(/[[\]]/g, '');
+                if (text.trim()) {
+                    parts.push(text);
+                }
+            }
+
+            const matchedText = match[0];
+
+            // Check if it's a base64 image
+            if (matchedText.startsWith('data:image/')) {
+                try {
+                    parts.push(
+                        <div key={match.index} className="history-email-image-container">
+                            <img
+                                src={matchedText}
+                                alt="Email attachment"
+                                className="history-email-image"
+                                loading="lazy"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    console.log('Failed to load image');
+                                }}
+                            />
+                        </div>
+                    );
+                } catch (error) {
+                    console.error('Error rendering image:', error);
+                }
+            } else {
+                // It's a URL
+                const cleanUrl = matchedText.replace(/[[\]]/g, '');
+                parts.push(
+                    <a
+                        key={match.index}
+                        href={cleanUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="history-email-link"
+                        title={`Opens in new tab: ${cleanUrl}`}
+                    >
+                        {cleanUrl}
+                        <FaExternalLinkAlt className="history-external-link-icon" />
+                    </a>
+                );
+            }
+
+            lastIndex = match.index + matchedText.length;
+        }
+
+        // Add any remaining text, removing any brackets
+        if (lastIndex < content.length) {
+            const text = content.slice(lastIndex).replace(/[[\]]/g, '');
+            if (text.trim()) {
+                parts.push(text);
+            }
+        }
+
+        return parts;
+    };
+
+    const handleDelete = async (scanId) => {
+        try {
+            const historyRef = ref(database, `users/${user.uid}/emailHistory/${scanId}`);
+            await remove(historyRef);
+            setDeleteConfirmation(null);
+        } catch (error) {
+            console.error('Error deleting scan:', error);
+            setError('Failed to delete scan history');
+        }
     };
 
     if (loading) {
@@ -258,7 +394,6 @@ const EmailHistory = () => {
                                 )}
                             </div>
 
-
                             <div className="card-risk-level">
                                 <div className="risk-level-text">Risk Level:</div>
                                 <div className="risk-score-container">
@@ -275,50 +410,95 @@ const EmailHistory = () => {
                                 ></div>
                             </div>
 
-                            {/* Removed scanResult details from card content */}
-                            {/* Re-add if needed elsewhere or in modal */}
-
-                            <button
-                                className="view-email-btn"
-                                onClick={() => setSelectedEmail(scan)}
-                            >
-                                <FaEnvelope /> View Email
-                            </button>
+                            <div className="card-actions">
+                                <button
+                                    className="view-email-btn"
+                                    onClick={() => setSelectedEmail(scan)}
+                                >
+                                    <FaEnvelope /> View Email
+                                </button>
+                                <button
+                                    className="delete-scan-btn"
+                                    onClick={() => setDeleteConfirmation(scan)}
+                                >
+                                    <FaTrash /> Delete
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
             )}
 
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmation && (
+                <div className="delete-modal">
+                    <div className="delete-modal-content">
+                        <h3>Delete Scan History</h3>
+                        <p>Are you sure you want to delete this scan history? This action cannot be undone.</p>
+                        <div className="delete-modal-actions">
+                            <button
+                                className="cancel-delete-btn"
+                                onClick={() => setDeleteConfirmation(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="confirm-delete-btn"
+                                onClick={() => handleDelete(deleteConfirmation.id)}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Modal for Email Content */}
             {selectedEmail && (
-                <div className="scan-modal">
-                    <div className="modal-content">
-                        <button className="close-button" onClick={() => setSelectedEmail(null)}>×</button>
+                <div className="history-scan-modal">
+                    <div className="history-modal-content">
+                        <button className="history-close-button" onClick={() => setSelectedEmail(null)}>×</button>
                         <h2>Email Details</h2>
-                        <div className="email-content">
-                            <div className="email-header">
-                                <div className="email-info-row">
-                                    <span className="info-label">Filename:</span>
-                                    <span className="info-value">{selectedEmail.filename}</span>
+                        <div className="history-email-header">
+                            <div className="history-email-info-grid">
+                                <div className="history-email-info-item">
+                                    <div className="history-info-icon">
+                                        <FaFileAlt />
+                                    </div>
+                                    <div className="history-info-content">
+                                        <span className="history-info-label">Filename</span>
+                                        <span className="history-info-value">{selectedEmail.filename}</span>
+                                    </div>
                                 </div>
-                                <div className="email-info-row">
-                                    <span className="info-label">Subject:</span>
-                                    <span className="info-value">{selectedEmail.subject || 'No subject'}</span>
+                                <div className="history-email-info-item">
+                                    <div className="history-info-icon">
+                                        <FaEnvelope />
+                                    </div>
+                                    <div className="history-info-content">
+                                        <span className="history-info-label">Subject</span>
+                                        <span className="history-info-value">{selectedEmail.subject || 'No subject'}</span>
+                                    </div>
                                 </div>
-                                <div className="email-info-row">
-                                    <span className="info-label">Sender's Domain:</span>
-                                    <span className="info-value">{selectedEmail.senderDomain || 'Unknown domain'}</span>
+                                <div className="history-email-info-item">
+                                    <div className="history-info-icon">
+                                        <FaGlobe />
+                                    </div>
+                                    <div className="history-info-content">
+                                        <span className="history-info-label">From</span>
+                                        <span className="history-info-value">{selectedEmail.senderDomain || 'Unknown domain'}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="email-body">
-                                <h3>Email Content</h3>
-                                <div className="email-content-text">
-                                    {selectedEmail.emailContent ? (
-                                        <pre>{selectedEmail.emailContent}</pre>
-                                    ) : (
-                                        <p className="no-content">No email content available</p>
-                                    )}
-                                </div>
+                        </div>
+
+                        <h2>Email Content</h2>
+                        <div className="history-email-body">
+                            <div className="history-email-content-text">
+                                {selectedEmail.emailContent ? (
+                                    <pre>{renderEmailContent(selectedEmail.emailContent)}</pre>
+                                ) : (
+                                    <p className="history-no-content">No email content available</p>
+                                )}
                             </div>
                         </div>
                     </div>
