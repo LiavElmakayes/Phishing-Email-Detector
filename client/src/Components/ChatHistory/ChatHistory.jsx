@@ -260,7 +260,12 @@ const ChatHistory = () => {
                 </div>
             </div>
 
-            <p className="chat-showing-text">Showing {filteredChats.length} of {chatHistory.length} conversations</p>
+            <p className="chat-showing-text">
+                {filteredChats.length === chatHistory.length
+                    ? `Showing all ${chatHistory.length} conversations`
+                    : `Showing ${filteredChats.length} of ${chatHistory.length} conversations${searchTerm ? ` for "${searchTerm}"` : ''}`
+                }
+            </p>
 
             {filteredChats.length === 0 && chatHistory.length > 0 ? (
                 <div className="chat-no-results">

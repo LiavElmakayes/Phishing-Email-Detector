@@ -163,6 +163,35 @@
     outline: none;
 }
 
+.showing-scans-text {
+    text-align: center;
+    color: #2d3748;
+    margin: 1.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    padding: 0.8rem 1.5rem;
+    background-color: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.showing-scans-text::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: #4f6ef7;
+    border-radius: 50%;
+}
+
 /* History Grid */
 .history-grid {
     display: grid;

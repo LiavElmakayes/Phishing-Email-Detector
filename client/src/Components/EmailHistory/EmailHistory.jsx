@@ -356,7 +356,12 @@ const EmailHistory = () => {
                 </div>
             </div>
 
-            <p className="showing-scans-text">Showing {filteredScans.length} of {totalScans} scans</p>
+            <p className="showing-scans-text">
+                {filteredScans.length === scanHistory.length
+                    ? `Showing all ${scanHistory.length} scans`
+                    : `Showing ${filteredScans.length} of ${scanHistory.length} scans${searchTerm ? ` for "${searchTerm}"` : ''}${filterStatus !== 'All Status' ? ` (${filterStatus})` : ''}`
+                }
+            </p>
 
             {filteredScans.length === 0 && scanHistory.length > 0 ? (
                 <div className="no-results">
