@@ -152,53 +152,44 @@ const EmailUploader = ({ onScanResult }) => {
     };
 
     return (
-        <div>
+        <div className="email-uploader-wrapper">
             <div className='title-area'>
-                <h1
-                    className='title'>Check Your Email for Phishing Threats
-                </h1>
+                <h1 className='title'>Check Your Email for Phishing Threats</h1>
             </div>
 
-            <div className="center-upload-area">
-                <div className="upload-area-container">
-                    <div
-                        className={`upload-area ${isDragging ? 'drag-active' : ''} ${isLoading ? 'loading' : ''} ${error ? 'error' : ''}`}
-                        onDragEnter={handleDragEnter}
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                    >
-                        {isLoading ? (
-                            <>
-                                <div className="loading-spinner">
-                                    <FaSpinner className="spinner-icon" />
-                                </div>
-                                <p className="loading-text">Analyzing your email...</p>
-                            </>
-                        ) : (
-                            <>
-                                <p className='description'>Upload your suspicious email file (.eml) and we'll analyze it for potential phishing indicators.</p>
-                                {/* <div className="circle">
-                                    <GrUpload size={25} className="upload-icon" />
-                                </div> */}
-                                <p className="first-desc">Drag or Drop the Email <GrUpload size={25} className="upload-icon" /></p>
-                                <p className="second-desc">(.eml file only)</p>
-                                <input
-                                    type="file"
-                                    id="emailFile"
-                                    accept=".eml"
-                                    ref={fileInputRef}
-                                    style={{ display: 'none' }}
-                                    onChange={handleFileChange}
-                                />
-                                <label htmlFor="emailFile" className="upload-button">
-                                    Attach File
-                                </label>
-                            </>
-                        )}
-                    </div>
-                    {error && <p className="error-message">{error}</p>}
+            <div className="upload-container">
+                <div className="upload-box">
+                    {isLoading ? (
+                        <div className="loading-state">
+                            <FaSpinner className="spinner-icon" />
+                            <p className="loading-text">Analyzing your email...</p>
+                        </div>
+                    ) : (
+                        <div
+                            className={`upload-content ${isDragging ? 'drag-active' : ''}`}
+                            onDragEnter={handleDragEnter}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                        >
+                            <p className='description'>Upload your suspicious email file (.eml) and we'll analyze it for potential phishing indicators.</p>
+                            <p className="first-desc">Drag or Drop the Email <GrUpload size={25} className="upload-icon" /></p>
+                            <p className="second-desc">(.eml file only)</p>
+                            <input
+                                type="file"
+                                id="emailFile"
+                                accept=".eml"
+                                ref={fileInputRef}
+                                style={{ display: 'none' }}
+                                onChange={handleFileChange}
+                            />
+                            <label htmlFor="emailFile" className="upload-button">
+                                Attach File
+                            </label>
+                        </div>
+                    )}
                 </div>
+                {error && <p className="error-message">{error}</p>}
             </div>
         </div>
     );
