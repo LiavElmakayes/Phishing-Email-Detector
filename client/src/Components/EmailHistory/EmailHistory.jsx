@@ -357,9 +357,13 @@ const EmailHistory = () => {
             </div>
 
             <p className="showing-scans-text">
-                {filteredScans.length === scanHistory.length
-                    ? `Showing all ${scanHistory.length} scans`
-                    : `Showing ${filteredScans.length} of ${scanHistory.length} scans${searchTerm ? ` for "${searchTerm}"` : ''}${filterStatus !== 'All Status' ? ` (${filterStatus})` : ''}`
+                {scanHistory.length === 0
+                    ? "You don't have any scans yet"
+                    : scanHistory.length === 1
+                        ? `Showing 1 scan`
+                        : filteredScans.length === scanHistory.length
+                            ? `Showing all ${scanHistory.length} scans`
+                            : `Showing ${filteredScans.length} of ${scanHistory.length} scans${searchTerm ? ` for "${searchTerm}"` : ''}${filterStatus !== 'All Status' ? ` (${filterStatus})` : ''}`
                 }
             </p>
 
@@ -370,9 +374,18 @@ const EmailHistory = () => {
                 </div>
             ) : filteredScans.length === 0 && scanHistory.length === 0 ? (
                 <div className="no-history">
-                    <FaFileAlt size={48} />
-                    <p>No scan history available</p>
-                    <p className="sub-text">Upload and scan an email to see results here</p>
+                    <div className="no-history-content">
+                        <div className="no-history-icon-wrapper">
+                            <FaFileAlt size={64} />
+                        </div>
+                        <h3 className="no-history-title">No Scan History Available</h3>
+                        <p className="no-history-description">Upload and scan an email to see your analysis results here</p>
+                        <div className="no-history-decoration">
+                            <div className="decoration-circle"></div>
+                            <div className="decoration-circle"></div>
+                            <div className="decoration-circle"></div>
+                        </div>
+                    </div>
                 </div>
             ) : (
                 <div className="history-grid">

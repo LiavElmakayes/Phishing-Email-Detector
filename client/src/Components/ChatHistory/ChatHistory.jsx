@@ -261,9 +261,13 @@ const ChatHistory = () => {
             </div>
 
             <p className="chat-showing-text">
-                {filteredChats.length === chatHistory.length
-                    ? `Showing all ${chatHistory.length} conversations`
-                    : `Showing ${filteredChats.length} of ${chatHistory.length} conversations${searchTerm ? ` for "${searchTerm}"` : ''}`
+                {chatHistory.length === 0
+                    ? "You don't have any chats yet"
+                    : chatHistory.length === 1
+                        ? `Showing 1 conversation`
+                        : filteredChats.length === chatHistory.length
+                            ? `Showing all ${chatHistory.length} conversations`
+                            : `Showing ${filteredChats.length} of ${chatHistory.length} conversations${searchTerm ? ` for "${searchTerm}"` : ''}`
                 }
             </p>
 
@@ -274,9 +278,18 @@ const ChatHistory = () => {
                 </div>
             ) : filteredChats.length === 0 && chatHistory.length === 0 ? (
                 <div className="chat-no-history">
-                    <FaComments size={48} />
-                    <p>No chat history available</p>
-                    <p className="chat-sub-text">Start a conversation with the AI assistant to see results here</p>
+                    <div className="chat-no-history-content">
+                        <div className="chat-no-history-icon-wrapper">
+                            <FaComments size={64} />
+                        </div>
+                        <h3 className="chat-no-history-title">No Chat History Available</h3>
+                        <p className="chat-no-history-description">Start a conversation with the AI assistant to see your analysis results here</p>
+                        <div className="chat-no-history-decoration">
+                            <div className="chat-decoration-circle"></div>
+                            <div className="chat-decoration-circle"></div>
+                            <div className="chat-decoration-circle"></div>
+                        </div>
+                    </div>
                 </div>
             ) : (
                 <div className="chat-history-grid">
