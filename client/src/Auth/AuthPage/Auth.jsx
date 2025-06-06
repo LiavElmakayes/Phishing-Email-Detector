@@ -57,7 +57,15 @@ const Auth = () => {
                     displayName: data.displayName
                 });
 
-                dispatch(setUser(userCredential.user));
+                // Only pass serializable user data
+                const userData = {
+                    uid: userCredential.user.uid,
+                    email: userCredential.user.email,
+                    displayName: userCredential.user.displayName,
+                    photoURL: userCredential.user.photoURL,
+                    emailVerified: userCredential.user.emailVerified
+                };
+                dispatch(setUser(userData));
 
             } else {
                 // Sign in with email and password
@@ -66,7 +74,15 @@ const Auth = () => {
                     data.email,
                     data.password
                 );
-                dispatch(setUser(userCredential.user));
+                // Only pass serializable user data
+                const userData = {
+                    uid: userCredential.user.uid,
+                    email: userCredential.user.email,
+                    displayName: userCredential.user.displayName,
+                    photoURL: userCredential.user.photoURL,
+                    emailVerified: userCredential.user.emailVerified
+                };
+                dispatch(setUser(userData));
             }
         } catch (error) {
             dispatch(setError(getErrorMessage(error.code)));
@@ -151,6 +167,7 @@ const Auth = () => {
                             onChange={handleChange}
                             value={data.email}
                             required
+                            autoComplete="username"
                         />
                     </div>
                     <div>
@@ -162,6 +179,7 @@ const Auth = () => {
                             onChange={handleChange}
                             value={data.password}
                             required
+                            autoComplete={isSignUp ? "new-password" : "current-password"}
                         />
 
                         {/* Password confirmation field for signup */}
@@ -174,6 +192,7 @@ const Auth = () => {
                                 onChange={handleChange}
                                 value={data.confirmPassword}
                                 required
+                                autoComplete="new-password"
                             />
                         )}
                     </div>

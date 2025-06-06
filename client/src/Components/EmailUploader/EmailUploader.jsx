@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './EmailUploader.css';
 import { GrUpload } from "react-icons/gr";
 import { FaSpinner } from "react-icons/fa";
@@ -13,6 +13,15 @@ const EmailUploader = ({ onScanResult }) => {
     const fileInputRef = useRef(null);
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
     const user = useSelector((state) => state.AuthReducer.user);
+    const prevUserRef = useRef(user);
+
+    // Add effect to clear scan result only when user actually changes
+    useEffect(() => {
+        if (prevUserRef.current !== user) {
+            onScanResult(null);
+            prevUserRef.current = user;
+        }
+    }, [user, onScanResult]);
 
     const scrollToResults = () => {
         // Wait a short moment for the scan result to be rendered
@@ -30,7 +39,7 @@ const EmailUploader = ({ onScanResult }) => {
     const saveScanToHistory = async (scanData) => {
         if (!user) {
             console.log('No user found, cannot save scan');
-            return;
+            return Promise.resolve();
         }
 
         console.log('Saving scan data:', scanData);
@@ -62,6 +71,7 @@ const EmailUploader = ({ onScanResult }) => {
             // Verify the data was saved
             const savedData = await get(newScanRef);
             console.log('Verified saved data:', savedData.val());
+            return Promise.resolve();
         } catch (error) {
             console.error('Error saving scan to history:', error);
             console.error('Error details:', {
@@ -69,6 +79,7 @@ const EmailUploader = ({ onScanResult }) => {
                 message: error.message,
                 stack: error.stack
             });
+            return Promise.reject(error);
         }
     };
 
@@ -137,10 +148,15 @@ const EmailUploader = ({ onScanResult }) => {
                         filename: file.name
                     };
                     console.log('Scan result to be saved:', scanResult); // Debug log
+
+                    // First update the UI with the scan result
                     onScanResult(scanResult);
-                    // Save to Firebase history
-                    saveScanToHistory(scanResult);
-                    // Scroll to results
+
+                    // Then save to Firebase history
+                    return saveScanToHistory(scanResult);
+                })
+                .then(() => {
+                    // Scroll to results after both operations are complete
                     scrollToResults();
                 })
                 .catch(error => {

@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import EmailUploader from './Components/EmailUploader/EmailUploader';
 import ScanResult from './Components/ScanResult/ScanResult';
@@ -18,9 +18,17 @@ import { setUser } from './store/AuthReducer';
 function App() {
   const [scanResult, setScanResult] = useState(null);
   const [loading, setLoading] = useState(true);
+  const prevUserRef = useRef(null);
 
   const dispatch = useDispatch();
   const user = useSelector((state) => state.AuthReducer.user);
+
+  useEffect(() => {
+    if (prevUserRef.current !== user) {
+      setScanResult(null);
+      prevUserRef.current = user;
+    }
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -43,12 +51,19 @@ function App() {
     return () => unsubscribe();
   }, [dispatch]);
 
-  const handleScanResult = (result) => {
-    setScanResult({
+  const handleScanResult = useCallback((result) => {
+    console.log('Handling scan result:', result); // Debug log
+    if (result === null) {
+      setScanResult(null);
+      return;
+    }
+    const scanResultData = {
       ...result,
       filename: result.filename || 'Unknown File'
-    });
-  };
+    };
+    console.log('Setting scan result:', scanResultData); // Debug log
+    setScanResult(scanResultData);
+  }, []);
 
   if (loading) {
     return <div>Loading...</div>;
