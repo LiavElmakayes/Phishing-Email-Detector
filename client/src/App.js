@@ -1,6 +1,6 @@
 // App.jsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import EmailUploader from './Components/EmailUploader/EmailUploader';
 import ScanResult from './Components/ScanResult/ScanResult';
 import EmailDemoPage from './Components/EmailDemoPage/EmailDemoPage';
@@ -12,108 +12,103 @@ import NavBar from './Components/NavBar/NavBar';
 import Footer from './Components/Footer/Footer';
 import { auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { setUser } from './store/AuthReducer';
 
+// Create a wrapper component to handle the Footer rendering
+const AppContent = ({ user, handleScanResult, scanResult, isLoading }) => {
+  const location = useLocation();
+  const isEmailDemoPage = location.pathname.startsWith('/demo');
+
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-container">
+      <NavBar />
+      <main className="app">
+        <Routes>
+          <Route
+            path="/"
+            element={user ? (
+              <>
+                <EmailUploader onScanResult={handleScanResult} />
+                {scanResult && <ScanResult {...scanResult} />}
+              </>
+            ) : (
+              <Navigate to="/auth" replace />
+            )}
+          />
+          <Route
+            path="/auth"
+            element={user ? <Navigate to="/" replace /> : <Auth />}
+          />
+          <Route
+            path="/demo"
+            element={user ? <EmailDemoPage /> : <Navigate to="/auth" replace />}
+          />
+          <Route
+            path="/demo/:id"
+            element={user ? <EmailDemoPage /> : <Navigate to="/auth" replace />}
+          />
+          <Route
+            path="/history"
+            element={user ? <EmailHistory /> : <Navigate to="/auth" replace />}
+          />
+          <Route
+            path="/chat-history"
+            element={user ? <ChatHistory /> : <Navigate to="/auth" replace />}
+          />
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
+        </Routes>
+      </main>
+      {!isEmailDemoPage && <Footer />}
+    </div>
+  );
+};
+
 function App() {
+  const [user, setUserState] = useState(null);
   const [scanResult, setScanResult] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const prevUserRef = useRef(null);
-
+  const [isLoading, setIsLoading] = useState(true);
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.AuthReducer.user);
-
-  useEffect(() => {
-    if (prevUserRef.current !== user) {
-      setScanResult(null);
-      prevUserRef.current = user;
-    }
-  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // Get only the essential user data
-        const userData = {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          emailVerified: user.emailVerified
-        };
-        dispatch(setUser(userData));
+        setUserState(user);
+        dispatch(setUser(user));
       } else {
+        setUserState(null);
         dispatch(setUser(null));
       }
-      setLoading(false);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, [dispatch]);
 
   const handleScanResult = useCallback((result) => {
-    console.log('Handling scan result:', result); // Debug log
-    if (result === null) {
-      setScanResult(null);
-      return;
-    }
-    const scanResultData = {
-      ...result,
-      filename: result.filename || 'Unknown File'
-    };
-    console.log('Setting scan result:', scanResultData); // Debug log
-    setScanResult(scanResultData);
+    setScanResult(result);
   }, []);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <Router>
-      <div className="app-container">
-        <NavBar />
-        <main className="app">
-          <Routes>
-            <Route
-              path="/"
-              element={user ? (
-                <>
-                  <EmailUploader onScanResult={handleScanResult} />
-                  {scanResult && <ScanResult {...scanResult} />}
-                </>
-              ) : (
-                <Navigate to="/auth" replace />
-              )}
-            />
-            <Route
-              path="/auth"
-              element={user ? <Navigate to="/" replace /> : <Auth />}
-            />
-            <Route
-              path="/demo"
-              element={user ? <EmailDemoPage /> : <Navigate to="/auth" replace />}
-            />
-            <Route
-              path="/demo/:id"
-              element={user ? <EmailDemoPage /> : <Navigate to="/auth" replace />}
-            />
-            <Route
-              path="/history"
-              element={user ? <EmailHistory /> : <Navigate to="/auth" replace />}
-            />
-            <Route
-              path="/chat-history"
-              element={user ? <ChatHistory /> : <Navigate to="/auth" replace />}
-            />
-            <Route
-              path="*"
-              element={<Navigate to="/" replace />}
-            />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <AppContent
+        user={user}
+        handleScanResult={handleScanResult}
+        scanResult={scanResult}
+        isLoading={isLoading}
+      />
     </Router>
   );
 }

@@ -93,6 +93,7 @@ const EmailHistory = () => {
 
     useEffect(() => {
         if (!user) return;
+        setLoading(true); // Set loading to true when starting to fetch
 
         const historyRef = ref(database, `users/${user.uid}/emailHistory`);
         // Order by scanDate, descending
@@ -277,15 +278,15 @@ const EmailHistory = () => {
         }
     };
 
+    if (!user) return null;  // Return null if no user (during initial app loading)
     if (loading) {
         return (
             <div className="loading-container">
                 <div className="loading-spinner"></div>
-                <p>Loading scan history...</p>
+                <p>Loading...</p>
             </div>
         );
     }
-
     if (error) {
         return (
             <div className="error-container">

@@ -477,33 +477,12 @@
 }
 
 /* Loading and Error States */
-.chat-loading-container,
 .chat-error-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 300px;
-}
-
-.chat-loading-spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #0084ff;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: chat-spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-@keyframes chat-spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
 }
 
 .chat-error-message {

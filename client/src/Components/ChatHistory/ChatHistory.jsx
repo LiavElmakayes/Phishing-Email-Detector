@@ -48,6 +48,7 @@ const ChatHistory = () => {
 
     useEffect(() => {
         if (!user) return;
+        setLoading(true); // Set loading to true when starting to fetch
 
         const historyRef = ref(database, `users/${user.uid}/chatHistory`);
         const historyQuery = query(historyRef, orderByChild('timestamp'));
@@ -134,15 +135,15 @@ const ChatHistory = () => {
         }
     };
 
+    if (!user) return null;  // Return null if no user (during initial app loading)
     if (loading) {
         return (
-            <div className="chat-loading-container">
-                <div className="chat-loading-spinner"></div>
-                <p>Loading chat history...</p>
+            <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading...</p>
             </div>
         );
     }
-
     if (error) {
         return (
             <div className="chat-error-container">
