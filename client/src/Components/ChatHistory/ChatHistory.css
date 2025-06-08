@@ -799,6 +799,7 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 2px solid #b8c2eb;
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
     overflow-x: hidden;
 }
@@ -852,6 +853,7 @@
     gap: clamp(1.5rem, 3vw, 2.5rem);
     margin-top: 0;
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
 }
 
@@ -861,6 +863,7 @@
     padding: clamp(1.5rem, 3vw, 2rem);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
     border: 2px solid #b8c2eb;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -982,9 +985,22 @@
         width: 90%;
     }
 
+    .chat-summary-container {
+        padding: 1.5rem;
+        width: 100%;
+        max-width: 100%;
+    }
+
     .chat-summary-content {
         grid-template-columns: 1fr;
         gap: 2rem;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .chat-summary-section {
+        width: 100%;
+        max-width: 100%;
     }
 
     .section-stats {
