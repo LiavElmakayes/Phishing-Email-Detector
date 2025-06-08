@@ -3,13 +3,13 @@ import './Auth.css'; // Importing CSS for styling
 import { VscEditSession } from "react-icons/vsc"; // Importing icon for session
 import { useState } from "react"; // Importing useState hook to manage state
 import { useDispatch, useSelector } from 'react-redux';
-import { auth } from '../../firebase';
+import { auth } from '../firebase';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     updateProfile
 } from 'firebase/auth';
-import { setLoading, setError, setUser, clearError } from '../../store/AuthReducer';
+import { setLoading, setError, setUser, clearError } from '../store/AuthReducer';
 
 const Auth = () => {
     const [isSignUp, setIsSignUp] = useState(true); // State to toggle between signup and login forms

@@ -6,7 +6,7 @@ import ScanResult from './Components/ScanResult/ScanResult';
 import EmailDemoPage from './Components/EmailDemoPage/EmailDemoPage';
 import EmailHistory from './Components/EmailHistory/EmailHistory';
 import ChatHistory from './Components/ChatHistory/ChatHistory';
-import Auth from './Auth/AuthPage/Auth';
+import Auth from './Auth/Auth';
 import './App.css';
 import NavBar from './Components/NavBar/NavBar';
 import Footer from './Components/Footer/Footer';
