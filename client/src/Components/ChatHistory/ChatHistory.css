@@ -88,7 +88,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1.5px solid;
+    border: 1px solid;
 }
 
 .chat-stat-card:not(.safe-emails):not(.phishing-detected) .chat-stat-icon {
@@ -921,6 +921,53 @@
 .chat-stat-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.chat-stat-icon {
+    font-size: 1.8rem;
+    padding: 0.8rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid;
+}
+
+.chat-stat-icon.safe {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+    border-color: #4CAF50;
+}
+
+.chat-stat-icon.phishing {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: #F44336;
+    border-color: #F44336;
+}
+
+.chat-stat-icon.risk {
+    background-color: #f3e5f5;
+    color: #9c27b0;
+    border-color: #9c27b0;
+}
+
+.chat-stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.chat-stat-value {
+    font-size: clamp(1.5rem, 2vw, 1.8rem);
+    font-weight: 600;
+    line-height: 1;
+    color: #333;
+}
+
+.chat-stat-label {
+    font-size: clamp(0.8rem, 1.2vw, 0.9rem);
+    color: #666;
+    font-weight: 500;
 }
 
 /* Media Queries */
