@@ -81,14 +81,13 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     width: calc(100% - 2rem);
     box-sizing: border-box;
+    margin-bottom: 2rem;
 }
 
 .email-content-text {
     background-color: white;
     border-radius: 8px;
     padding: 1.25rem;
-    max-height: 400px;
-    overflow-y: auto;
     border: 1px solid #e9ecef;
     width: 100%;
     box-sizing: border-box;

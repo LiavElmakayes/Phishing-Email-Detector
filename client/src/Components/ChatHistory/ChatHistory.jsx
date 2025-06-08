@@ -379,7 +379,7 @@ const ChatHistory = () => {
                             </div>
                             <div className="chat-messages-container">
                                 {selectedChat.messages?.map((message, index) => (
-                                    <div key={index} className={`chat-message ${message.role}`}>
+                                    <div key={index} className={`chat-message ${message.role} ${message.type || ''}`}>
                                         <div className="chat-message-content" dangerouslySetInnerHTML={{ __html: message.content }} />
                                         <div className="chat-message-timestamp">{message.timestamp}</div>
                                     </div>
