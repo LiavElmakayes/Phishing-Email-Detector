@@ -194,7 +194,7 @@ const ChatHistory = () => {
                                 </div>
                                 <div className="chat-stat-info">
                                     <div className="chat-stat-value">{initialPhishingDetected}</div>
-                                    <div className="chat-stat-label">Phishing Detected</div>
+                                    <div className="chat-stat-label phishing-detected">Phishing Detected</div>
                                 </div>
                             </div>
                             <div className="chat-stat-item">
@@ -231,7 +231,7 @@ const ChatHistory = () => {
                                 </div>
                                 <div className="chat-stat-info">
                                     <div className="chat-stat-value">{finalPhishingDetected}</div>
-                                    <div className="chat-stat-label">Phishing Detected</div>
+                                    <div className="chat-stat-label phishing-detected">Phishing Detected</div>
                                 </div>
                             </div>
                             <div className="chat-stat-item">
@@ -304,44 +304,48 @@ const ChatHistory = () => {
                         return (
                             <div key={chat.id} className="chat-history-card">
                                 <div className="chat-card-summary">
-                                    <div className="chat-email-icon-wrapper">
-                                        <FaEnvelope className="chat-email-icon" />
-                                    </div>
-                                    <div className="chat-summary-details">
-                                        <span className="chat-email-subject">{chat.emailSubject || 'No Subject'}</span>
-                                        <div className="chat-summary-meta">
-                                            <p className="chat-sender">From: {chat.emailSender || 'Unknown Sender'}</p>
-                                            <div className="chat-meta-item">
-                                                <FaCalendarAlt />
-                                                <span>{chat.timestamp ? new Date(chat.timestamp).toLocaleDateString() : 'N/A'}</span>
-                                            </div>
-                                            <div className="chat-meta-item">
-                                                <FaComments />
-                                                <span>{chat.messages?.length || 0} messages</span>
+                                    <div className="chat-email-info">
+                                        <div className="chat-email-icon-wrapper">
+                                            <FaEnvelope className="chat-email-icon" />
+                                        </div>
+                                        <div className="chat-summary-details">
+                                            <span className="chat-email-subject">{chat.emailSubject || 'No Subject'}</span>
+                                            <div className="chat-summary-meta">
+                                                <p className="chat-sender">From: {chat.emailSender || 'Unknown Sender'}</p>
+                                                <div className="chat-meta-item">
+                                                    <FaCalendarAlt />
+                                                    <span>{chat.timestamp ? new Date(chat.timestamp).toLocaleDateString() : 'N/A'}</span>
+                                                </div>
+                                                <div className="chat-meta-item">
+                                                    <FaComments />
+                                                    <span>{chat.messages?.length || 0} messages</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="chat-result-info">
-                                        <div className="chat-legitimacy-transition">
-                                            <span className={`chat-legitimacy-badge ${initialLegitimacy.toLowerCase().replace(' ', '-')}`}>
-                                                {initialLegitimacy === 'Legitimate' ? <CheckCircle size={14} style={{ marginRight: '4px' }} /> : <FaExclamationTriangle size={14} style={{ marginRight: '4px' }} />}
-                                                {initialLegitimacy}
-                                            </span>
-                                            <span className="chat-legitimacy-arrow">→</span>
-                                            <span className={`chat-legitimacy-badge ${finalLegitimacy.toLowerCase().replace(' ', '-')}`}>
-                                                {finalLegitimacy === 'Legitimate' ? <CheckCircle size={14} style={{ marginRight: '4px' }} /> : <FaExclamationTriangle size={14} style={{ marginRight: '4px' }} />}
-                                                {finalLegitimacy}
-                                            </span>
-                                        </div>
-                                        <div className="chat-risk-score-transition">
-                                            <div className={`chat-risk-score initial ${initialLegitimacy.toLowerCase()}`}>
-                                                <FaShieldAlt size={14} style={{ marginRight: '4px' }} />
-                                                Initial: {Math.round(chat.scanResult.result * 10)}/100
+                                    <div className="chat-analysis-box">
+                                        <div className="chat-result-info">
+                                            <div className="chat-legitimacy-transition">
+                                                <span className={`chat-legitimacy-badge ${initialLegitimacy.toLowerCase().replace(' ', '-')}`}>
+                                                    {initialLegitimacy === 'Legitimate' ? <CheckCircle size={14} style={{ marginRight: '4px' }} /> : <FaExclamationTriangle size={14} style={{ marginRight: '4px' }} />}
+                                                    {initialLegitimacy}
+                                                </span>
+                                                <span className="chat-legitimacy-arrow">→</span>
+                                                <span className={`chat-legitimacy-badge ${finalLegitimacy.toLowerCase().replace(' ', '-')}`}>
+                                                    {finalLegitimacy === 'Legitimate' ? <CheckCircle size={14} style={{ marginRight: '4px' }} /> : <FaExclamationTriangle size={14} style={{ marginRight: '4px' }} />}
+                                                    {finalLegitimacy}
+                                                </span>
                                             </div>
-                                            <span className="chat-risk-arrow">→</span>
-                                            <div className={`chat-risk-score final ${finalLegitimacy.toLowerCase()}`}>
-                                                <FaShieldAlt size={14} style={{ marginRight: '4px' }} />
-                                                Final: {aiFinalScore}/100
+                                            <div className="chat-risk-score-transition">
+                                                <div className={`chat-risk-score initial ${initialLegitimacy.toLowerCase()}`}>
+                                                    <FaShieldAlt size={14} style={{ marginRight: '4px' }} />
+                                                    Initial: {Math.round(chat.scanResult.result * 10)}/100
+                                                </div>
+                                                <span className="chat-risk-arrow">→</span>
+                                                <div className={`chat-risk-score final ${finalLegitimacy.toLowerCase()}`}>
+                                                    <FaShieldAlt size={14} style={{ marginRight: '4px' }} />
+                                                    Final: {aiFinalScore}/100
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
