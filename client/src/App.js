@@ -39,7 +39,13 @@ const AppContent = ({ user, handleScanResult, scanResult, isLoading }) => {
             element={user ? (
               <>
                 <EmailUploader onScanResult={handleScanResult} />
-                {scanResult && <ScanResult {...scanResult} />}
+                {scanResult && (
+                  <ScanResult
+                    result={scanResult.result}
+                    filename={scanResult.filename}
+                    scanData={scanResult}
+                  />
+                )}
               </>
             ) : (
               <Navigate to="/auth" replace />

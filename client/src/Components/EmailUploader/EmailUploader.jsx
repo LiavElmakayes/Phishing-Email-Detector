@@ -5,11 +5,15 @@ import { FaSpinner } from "react-icons/fa";
 import { ref, push, set, get } from "firebase/database";
 import { useSelector } from 'react-redux';
 import { database } from '../../firebase';
+import ScanChatBot from '../ScanChatBot/ScanChatBot';
 
 const EmailUploader = ({ onScanResult }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [scanData, setScanData] = useState(null);
+    const [showChatBot, setShowChatBot] = useState(false);
+    const [currentScanId, setCurrentScanId] = useState(null);
     const fileInputRef = useRef(null);
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
     const user = useSelector((state) => state.AuthReducer.user);
@@ -67,11 +71,12 @@ const EmailUploader = ({ onScanResult }) => {
         try {
             await set(newScanRef, historyEntry);
             console.log('Scan saved successfully with ID:', newScanRef.key);
+            setCurrentScanId(newScanRef.key); // Store the scan ID
 
             // Verify the data was saved
             const savedData = await get(newScanRef);
             console.log('Verified saved data:', savedData.val());
-            return Promise.resolve();
+            return Promise.resolve(newScanRef.key); // Return the scan ID
         } catch (error) {
             console.error('Error saving scan to history:', error);
             console.error('Error details:', {
@@ -127,6 +132,7 @@ const EmailUploader = ({ onScanResult }) => {
 
             setError('');
             setIsLoading(true);
+            setShowChatBot(false); // Hide chatbot while loading
             const formData = new FormData();
             formData.append('emlFile', file);
 
@@ -141,28 +147,43 @@ const EmailUploader = ({ onScanResult }) => {
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Received data from backend:', data); // Debug log
+                    console.log('Received data from backend:', data);
                     setIsLoading(false);
                     const scanResult = {
                         ...data,
                         filename: file.name
                     };
-                    console.log('Scan result to be saved:', scanResult); // Debug log
+                    console.log('Scan result to be saved:', scanResult);
+                    console.log('Scan result structure:', {
+                        result: scanResult.result,
+                        legitimacy: scanResult.legitimacy,
+                        details: scanResult.details,
+                        raw: scanResult.raw,
+                        metadata: scanResult.metadata,
+                        emailData: scanResult.emailData,
+                        spamAssassinResults: scanResult.spamAssassinResults
+                    });
 
-                    // First update the UI with the scan result
+                    // Update the scan data for the chatbot
+                    setScanData(scanResult);
+
+                    // Call onScanResult with the complete scan data
                     onScanResult(scanResult);
 
-                    // Then save to Firebase history
+                    // Save to Firebase history and get the scan ID
                     return saveScanToHistory(scanResult);
                 })
-                .then(() => {
-                    // Scroll to results after both operations are complete
+                .then((scanId) => {
+                    setCurrentScanId(scanId);
+                    setShowChatBot(true);
                     scrollToResults();
                 })
                 .catch(error => {
                     console.error('Error uploading file:', error);
                     setIsLoading(false);
                     setError('There was an error scanning the file. Please try again.');
+                    setShowChatBot(false);
+                    setCurrentScanId(null);
                 });
         }
     };
@@ -207,6 +228,19 @@ const EmailUploader = ({ onScanResult }) => {
                 </div>
                 {error && <p className="error-message">{error}</p>}
             </div>
+
+            {/* Only show ScanChatBot when we have scan data and showChatBot is true */}
+            {scanData && showChatBot && (
+                <ScanChatBot
+                    scanData={scanData}
+                    isOpen={true}
+                    onClose={() => {
+                        setShowChatBot(false);
+                        setCurrentScanId(null);
+                    }}
+                    scanId={currentScanId}
+                />
+            )}
         </div>
     );
 };

@@ -7,6 +7,7 @@ const cors = require('cors');
 const { exec } = require('child_process');
 const { simpleParser } = require('mailparser');
 const chatbotRouter = require('./chatbot');
+const scanChatbotRouter = require('./scanChatbot');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +20,9 @@ const upload = multer({ dest: 'uploads/' });
 
 // Use the chatbot router
 app.use('/api', chatbotRouter);
+
+// Add the scan chatbot route
+app.use('/api', scanChatbotRouter);
 
 // Function to format sender information
 const formatSender = (parsed) => {
@@ -208,8 +212,12 @@ app.post('/analyze', upload.single('emlFile'), async (req, res) => {
                     emailData: {
                         subject: parsed.subject || 'No subject',
                         senderDomain: senderDomain,
-                        content: cleanContent || 'No content available'
-                    }
+                        content: cleanContent || 'No content available',
+                        from: parsed.from?.text || 'Unknown sender',
+                        to: parsed.to?.text || 'Unknown recipient',
+                        date: parsed.date || 'Unknown date'
+                    },
+                    raw: result.raw // Include the raw SpamAssassin output
                 };
 
                 console.log('Sending response:', JSON.stringify(response, null, 2));
@@ -227,17 +235,103 @@ app.post('/analyze', upload.single('emlFile'), async (req, res) => {
 
 // Function to parse SpamAssassin output
 const parseSpamassassinResult = (stdout) => {
-    // Regex to extract the score from the SpamAssassin output
-    const scoreMatch = stdout.match(/score=([0-9]+\.[0-9]+)/);
+    try {
+        // Extract the score
+        const scoreMatch = stdout.match(/score=([0-9]+\.[0-9]+)/);
+        const score = scoreMatch ? parseFloat(scoreMatch[1]) : null;
+        const legitimacy = score >= 5.0 ? 'Phishing' : 'Legitimate';
 
-    if (scoreMatch) {
-        const score = parseFloat(scoreMatch[1]);
-        const legitimacy = score >= 5.0 ? 'Phishing' : 'Legitimate'; // If score >= 5.0, classify as phishing
-        return { result: score, legitimacy };
+        // Extract SpamAssassin headers
+        const spamStatus = stdout.match(/X-Spam-Status: (.*?)(?:\n|$)/)?.[1];
+        const spamLevel = stdout.match(/X-Spam-Level: (.*?)(?:\n|$)/)?.[1];
+        const spamCheckerVersion = stdout.match(/X-Spam-Checker-Version: (.*?)(?:\n|$)/)?.[1];
+        const spamFlag = stdout.match(/X-Spam-Flag: (.*?)(?:\n|$)/)?.[1];
+
+        // Parse tests from Spam-Status
+        let tests = [];
+        if (spamStatus) {
+            const testsMatch = spamStatus.match(/tests=(.*?)(?:\s|$)/);
+            if (testsMatch) {
+                tests = testsMatch[1].split(',').map(test => {
+                    const [name, score] = test.split('=');
+                    return {
+                        name: name.trim(),
+                        score: score ? parseFloat(score) : 0
+                    };
+                });
+            }
+        }
+
+        // Parse authentication results
+        const authResults = stdout.match(/Authentication-Results: (.*?)(?:\n|$)/)?.[1];
+        const spfResult = stdout.match(/Received-SPF: (.*?)(?:\n|$)/)?.[1];
+        const dkimResult = authResults?.match(/dkim=(.*?)(?:\s|$)/)?.[1];
+        const dmarcResult = authResults?.match(/dmarc=(.*?)(?:\s|$)/)?.[1];
+
+        // Parse email headers
+        const received = stdout.match(/Received: (.*?)(?:\n(?![ \t])|$)/gs)?.map(h => h.trim()) || [];
+        const messageId = stdout.match(/Message-Id: (.*?)(?:\n|$)/)?.[1];
+        const returnPath = stdout.match(/Return-Path: (.*?)(?:\n|$)/)?.[1];
+        const senderIP = stdout.match(/X-Sender-IP: (.*?)(?:\n|$)/)?.[1];
+        const contentType = stdout.match(/Content-Type: (.*?)(?:\n|$)/)?.[1];
+        const date = stdout.match(/Date: (.*?)(?:\n|$)/)?.[1];
+
+        // Parse content analysis details
+        const contentAnalysis = stdout.match(/Content analysis details:\s*\((.*?)\)\s*\n\n(.*?)(?:\n\n|$)/s);
+        let analysisDetails = [];
+        if (contentAnalysis) {
+            const detailsLines = contentAnalysis[2].split('\n');
+            analysisDetails = detailsLines
+                .filter(line => line.match(/^\s*[0-9.-]+\s+\w+/))
+                .map(line => {
+                    const [points, rule, ...desc] = line.trim().split(/\s+/);
+                    return {
+                        points: parseFloat(points),
+                        rule: rule,
+                        description: desc.join(' ')
+                    };
+                });
+        }
+
+        return {
+            result: score,
+            legitimacy,
+            metadata: {
+                spamAssassinScore: score,
+                spamStatus,
+                spamLevel,
+                spamCheckerVersion,
+                spamFlag,
+                tests,
+                authentication: {
+                    spf: spfResult,
+                    dkim: dkimResult,
+                    dmarc: dmarcResult
+                },
+                analysisDetails
+            },
+            headers: {
+                received,
+                messageId,
+                returnPath,
+                senderIP,
+                contentType,
+                date
+            },
+            raw: stdout // Include the complete raw output
+        };
+    } catch (error) {
+        console.error('Error parsing SpamAssassin output:', error);
+        return {
+            result: null,
+            legitimacy: 'Phishing',
+            metadata: {
+                spamAssassinScore: null,
+                error: 'Failed to parse SpamAssassin output'
+            },
+            raw: stdout
+        };
     }
-
-    // Return default values if no score is found
-    return { result: null, legitimacy: 'Phishing' };
 };
 
 app.listen(PORT, () => {

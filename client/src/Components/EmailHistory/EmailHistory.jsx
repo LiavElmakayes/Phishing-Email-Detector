@@ -2,8 +2,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ref, onValue, query, orderByChild, remove } from "firebase/database";
 import { useSelector } from 'react-redux';
 import { database } from '../../firebase';
-import { FaFileAlt, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaEnvelope, FaChartLine, FaSearch, FaFilter, FaGlobe, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
+import { FaFileAlt, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaEnvelope, FaChartLine, FaSearch, FaFilter, FaGlobe, FaExternalLinkAlt, FaTrash, FaDatabase, FaComments } from 'react-icons/fa';
 import './EmailHistory.css';
+import ScanDataModal from '../ScanDataModal/ScanDataModal';
+import ScanChatBot from '../ScanChatBot/ScanChatBot';
 
 // Custom Dropdown Component
 const CustomDropdown = ({ filterStatus, setFilterStatus }) => {
@@ -85,10 +87,14 @@ const EmailHistory = () => {
     const [scanHistory, setScanHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedEmail, setSelectedEmail] = useState(null);
+    const [selectedScanData, setSelectedScanData] = useState(null);
+    const [selectedChat, setSelectedChat] = useState(null);
+    const [isChatOpen, setIsChatOpen] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All Status');
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+    const [forceUnminimize, setForceUnminimize] = useState(false);
     const user = useSelector((state) => state.AuthReducer.user);
 
     useEffect(() => {
@@ -278,6 +284,13 @@ const EmailHistory = () => {
         }
     };
 
+    const handleChatSelect = (scan) => {
+        setSelectedChat(scan);
+        setForceUnminimize(true); // Force unminimize when selecting a chat
+        // Reset forceUnminimize after a short delay
+        setTimeout(() => setForceUnminimize(false), 100);
+    };
+
     if (!user) return null;  // Return null if no user (during initial app loading)
     if (loading) {
         return (
@@ -437,6 +450,18 @@ const EmailHistory = () => {
                                     <FaEnvelope /> View Email
                                 </button>
                                 <button
+                                    className="view-scan-data-btn"
+                                    onClick={() => setSelectedScanData(scan)}
+                                >
+                                    <FaDatabase /> View Scan Data
+                                </button>
+                                <button
+                                    className="view-chat-btn"
+                                    onClick={() => handleChatSelect(scan)}
+                                >
+                                    <FaComments /> View Chat
+                                </button>
+                                <button
                                     className="delete-scan-btn"
                                     onClick={() => setDeleteConfirmation(scan)}
                                 >
@@ -522,6 +547,27 @@ const EmailHistory = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Add ScanDataModal */}
+            {selectedScanData && (
+                <ScanDataModal
+                    isOpen={!!selectedScanData}
+                    onClose={() => setSelectedScanData(null)}
+                    scanData={selectedScanData}
+                />
+            )}
+
+            {/* Update ScanChatBot to pass scanId */}
+            {selectedChat && (
+                <ScanChatBot
+                    scanData={selectedChat}
+                    isOpen={true}
+                    onClose={() => {
+                        setSelectedChat(null);
+                    }}
+                    scanId={selectedChat.id}
+                />
             )}
         </div>
     );
