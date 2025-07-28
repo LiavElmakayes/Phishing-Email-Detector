@@ -1,9 +1,30 @@
 // ScanResult.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './ScanResult.css';
-import { FaShieldAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { FaShieldAlt, FaExclamationTriangle, FaDatabase } from 'react-icons/fa';
+import ScanDataModal from '../ScanDataModal/ScanDataModal';
 
-const ScanResult = ({ result, filename }) => {
+const ScanResult = ({ result, filename, scanData }) => {
+    const [showScanData, setShowScanData] = useState(false);
+
+    // Debug log to see what data we're receiving
+    useEffect(() => {
+        console.log('ScanResult received scanData:', scanData);
+        console.log('ScanResult received props:', {
+            result,
+            filename,
+            scanData: {
+                result: scanData?.result,
+                legitimacy: scanData?.legitimacy,
+                details: scanData?.details,
+                raw: scanData?.raw,
+                metadata: scanData?.metadata,
+                emailData: scanData?.emailData,
+                spamAssassinResults: scanData?.spamAssassinResults
+            }
+        });
+    }, [scanData, result, filename]);
+
     const percentage = result * 10;
     const isLegitimate = percentage < 50;
 
@@ -40,27 +61,54 @@ const ScanResult = ({ result, filename }) => {
     const progressBarColor = getProgressBarColor(percentage);
 
     return (
-        <div className={`scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
-            <div className="result-icon">{icon}</div>
-            <div className="result-text">
-                <span className="result-percentage">Risk Score: {percentage}% Phishing</span>
-                <span className="result-filename">File: {filename}</span>
+        <>
+            <div className={`scan-result ${isLegitimate ? 'legitimate' : 'phishing'}`}>
+                <div className="result-icon">{icon}</div>
+                <div className="result-text">
+                    <span className="result-percentage">Risk Score: {percentage}% Phishing</span>
+                    <span className="result-filename">File: {filename}</span>
+                </div>
+                <div className="progress-bar">
+                    <div
+                        className="progress-bar-fill"
+                        style={{ width: `${percentage}%`, backgroundColor: progressBarColor }}
+                    ></div>
+                </div>
+                <div className="result-details">
+                    {isLegitimate ? (
+                        <p>This email appears to be legitimate - No phishing indicators found.</p>
+                    ) : (
+                        <p>This email has been flagged as potentially phishing - Proceed with caution.</p>
+                    )}
+                </div>
+                <button
+                    className="view-scan-data-button"
+                    onClick={() => {
+                        console.log('Opening modal with scan data:', scanData);
+                        console.log('Scan data structure at modal open:', {
+                            result: scanData?.result,
+                            legitimacy: scanData?.legitimacy,
+                            details: scanData?.details,
+                            raw: scanData?.raw,
+                            metadata: scanData?.metadata,
+                            emailData: scanData?.emailData,
+                            spamAssassinResults: scanData?.spamAssassinResults
+                        });
+                        setShowScanData(true);
+                    }}
+                >
+                    <FaDatabase /> View Scan Data
+                </button>
+            </div>
 
-            </div>
-            <div className="progress-bar">
-                <div
-                    className="progress-bar-fill"
-                    style={{ width: `${percentage}%`, backgroundColor: progressBarColor }}
-                ></div>
-            </div>
-            <div className="result-details">
-                {isLegitimate ? (
-                    <p>This email appears to be legitimate - No phishing indicators found.</p>
-                ) : (
-                    <p>This email has been flagged as potentially phishing - Proceed with caution.</p>
-                )}
-            </div>
-        </div>
+            {showScanData && (
+                <ScanDataModal
+                    isOpen={showScanData}
+                    onClose={() => setShowScanData(false)}
+                    scanData={scanData}
+                />
+            )}
+        </>
     );
 };
 

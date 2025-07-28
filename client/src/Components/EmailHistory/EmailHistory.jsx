@@ -2,8 +2,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ref, onValue, query, orderByChild, remove } from "firebase/database";
 import { useSelector } from 'react-redux';
 import { database } from '../../firebase';
-import { FaFileAlt, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaEnvelope, FaChartLine, FaSearch, FaFilter, FaGlobe, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
+import { FaFileAlt, FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaEnvelope, FaChartLine, FaSearch, FaFilter, FaGlobe, FaExternalLinkAlt, FaTrash, FaDatabase, FaComments } from 'react-icons/fa';
 import './EmailHistory.css';
+import ScanDataModal from '../ScanDataModal/ScanDataModal';
+import ScanChatBot from '../ScanChatBot/ScanChatBot';
 
 // Custom Dropdown Component
 const CustomDropdown = ({ filterStatus, setFilterStatus }) => {
@@ -13,8 +15,7 @@ const CustomDropdown = ({ filterStatus, setFilterStatus }) => {
     const options = [
         { value: "All Status", label: "All Status" },
         { value: "Legitimate", label: "Legitimate" },
-        { value: "Phishing", label: "Phishing" },
-        { value: "Suspicious", label: "Suspicious" }
+        { value: "Phishing", label: "Phishing" }
     ];
 
     // Close dropdown when clicking outside
@@ -85,6 +86,8 @@ const EmailHistory = () => {
     const [scanHistory, setScanHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedEmail, setSelectedEmail] = useState(null);
+    const [selectedScanData, setSelectedScanData] = useState(null);
+    const [selectedChat, setSelectedChat] = useState(null);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All Status');
@@ -132,7 +135,7 @@ const EmailHistory = () => {
 
     const totalScans = scanHistory.length;
     const legitimateScans = scanHistory.filter(scan => scan.legitimacy === 'Legitimate').length;
-    const suspiciousScans = scanHistory.filter(scan => scan.legitimacy === 'Phishing' || scan.legitimacy === 'Suspicious').length;
+    const suspiciousScans = scanHistory.filter(scan => scan.legitimacy === 'Phishing').length;
     const totalRisk = scanHistory.reduce((sum, scan) => sum + (scan.result || 0), 0);
     const averageRisk = totalScans > 0 ? ((totalRisk / totalScans) * 10).toFixed(0) : 0;
 
@@ -278,6 +281,12 @@ const EmailHistory = () => {
         }
     };
 
+    const handleChatSelect = (scan) => {
+        setSelectedChat(scan);
+        // Reset forceUnminimize after a short delay
+        // setTimeout(() => setForceUnminimize(false), 100);
+    };
+
     if (!user) return null;  // Return null if no user (during initial app loading)
     if (loading) {
         return (
@@ -406,10 +415,8 @@ const EmailHistory = () => {
                             <div className="card-legitimacy-status">
                                 {scan.legitimacy === 'Legitimate' ? (
                                     <span className="legitimacy-badge legitimate"><FaCheckCircle /> Legitimate</span>
-                                ) : scan.legitimacy === 'Phishing' ? (
-                                    <span className="legitimacy-badge phishing"><FaTimesCircle /> Phishing</span>
                                 ) : (
-                                    <span className="legitimacy-badge suspicious"><FaTimesCircle /> Suspicious</span>
+                                    <span className="legitimacy-badge phishing"><FaTimesCircle /> Phishing</span>
                                 )}
                             </div>
 
@@ -435,6 +442,18 @@ const EmailHistory = () => {
                                     onClick={() => setSelectedEmail(scan)}
                                 >
                                     <FaEnvelope /> View Email
+                                </button>
+                                <button
+                                    className="view-scan-data-btn"
+                                    onClick={() => setSelectedScanData(scan)}
+                                >
+                                    <FaDatabase /> View Scan Data
+                                </button>
+                                <button
+                                    className="view-chat-btn"
+                                    onClick={() => handleChatSelect(scan)}
+                                >
+                                    <FaComments /> View Chat
                                 </button>
                                 <button
                                     className="delete-scan-btn"
@@ -522,6 +541,28 @@ const EmailHistory = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Add ScanDataModal */}
+            {selectedScanData && (
+                <ScanDataModal
+                    isOpen={!!selectedScanData}
+                    onClose={() => setSelectedScanData(null)}
+                    scanData={selectedScanData}
+                />
+            )}
+
+            {/* Update ScanChatBot to pass scanId */}
+            {selectedChat && (
+                <ScanChatBot
+                    key={selectedChat.id} // Force remount to reset minimized state
+                    scanData={selectedChat}
+                    isOpen={true}
+                    onClose={() => {
+                        setSelectedChat(null);
+                    }}
+                    scanId={selectedChat.id}
+                />
             )}
         </div>
     );

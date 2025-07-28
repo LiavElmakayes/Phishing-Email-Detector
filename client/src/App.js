@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import EmailUploader from './Components/EmailUploader/EmailUploader';
-import ScanResult from './Components/ScanResult/ScanResult';
 import EmailDemoPage from './Components/EmailDemoPage/EmailDemoPage';
 import EmailHistory from './Components/EmailHistory/EmailHistory';
 import ChatHistory from './Components/ChatHistory/ChatHistory';
@@ -37,10 +36,15 @@ const AppContent = ({ user, handleScanResult, scanResult, isLoading }) => {
           <Route
             path="/"
             element={user ? (
-              <>
-                <EmailUploader onScanResult={handleScanResult} />
-                {scanResult && <ScanResult {...scanResult} />}
-              </>
+              <Navigate to="/demo" replace />
+            ) : (
+              <Navigate to="/auth" replace />
+            )}
+          />
+          <Route
+            path="/upload"
+            element={user ? (
+              <EmailUploader onScanResult={handleScanResult} />
             ) : (
               <Navigate to="/auth" replace />
             )}
