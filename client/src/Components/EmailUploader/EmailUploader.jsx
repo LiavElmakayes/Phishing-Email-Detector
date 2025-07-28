@@ -6,6 +6,7 @@ import { ref, push, set, get } from "firebase/database";
 import { useSelector } from 'react-redux';
 import { database } from '../../firebase';
 import ScanChatBot from '../ScanChatBot/ScanChatBot';
+import ScanResult from '../ScanResult/ScanResult';
 
 const EmailUploader = ({ onScanResult }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -229,6 +230,11 @@ const EmailUploader = ({ onScanResult }) => {
                 {error && <p className="error-message">{error}</p>}
             </div>
 
+            {/* Show ScanResult when scanData is available and not loading */}
+            {scanData && !isLoading && (
+                <ScanResult result={scanData.result} filename={scanData.filename} scanData={scanData} />
+            )}
+
             {/* Only show ScanChatBot when we have scan data and showChatBot is true */}
             {scanData && showChatBot && (
                 <ScanChatBot
@@ -240,6 +246,35 @@ const EmailUploader = ({ onScanResult }) => {
                     }}
                     scanId={currentScanId}
                 />
+            )}
+
+            {/* Show floating AI Assistant button if scanData exists and chat is closed */}
+            {scanData && !showChatBot && (
+                <button
+                    className="scan-chatbot-button"
+                    style={{
+                        position: 'fixed',
+                        bottom: 20,
+                        right: 20,
+                        zIndex: 1000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '12px 20px',
+                        backgroundColor: '#0084ff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 30,
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.15)',
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                    }}
+                    onClick={() => setShowChatBot(true)}
+                >
+                    <span style={{ fontSize: '1.2rem' }}>🤖</span>
+                    <span>AI Assistant</span>
+                </button>
             )}
         </div>
     );

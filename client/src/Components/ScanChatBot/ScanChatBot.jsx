@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ScanChatBot.css';
-import { FaRobot, FaTimes } from 'react-icons/fa';
+import { FaRobot } from 'react-icons/fa';
 import { ref, set, get } from "firebase/database";
 import { useSelector } from 'react-redux';
 import { database } from '../../firebase';
@@ -141,7 +141,7 @@ What would you like to know about your scan results?`),
             };
             setMessages([welcomeMessage]);
         }
-    }, [isExpanded, isOpen]);
+    }, [isExpanded, isOpen, messages.length]);
 
     const handleSendMessage = async () => {
         if (!userInput.trim() || isTyping) return;
@@ -222,20 +222,27 @@ What would you like to know about your scan results?`),
                     </div>
 
                     <div className="scan-chatbot-messages" ref={chatContainerRef}>
-                        {messages.map((message, index) => (
-                            <div
-                                key={index}
-                                className={`scan-message ${message.role}`}
-                            >
+                        {messages.map((message, index) => {
+                            let classList = [];
+                            if (message.role === 'user') classList.push('scan-message-user');
+                            else if (message.role === 'assistant') classList.push('scan-message-assistant');
+                            if (message.type === 'welcome') classList = ['scan-message-welcome'];
+                            if (message.type === 'error') classList = ['scan-message-error'];
+                            return (
                                 <div
-                                    className="scan-message-content"
-                                    dangerouslySetInnerHTML={{ __html: message.content }}
-                                />
-                                <div className="scan-message-timestamp">{message.timestamp}</div>
-                            </div>
-                        ))}
+                                    key={index}
+                                    className={classList.join(' ')}
+                                >
+                                    <div
+                                        className="scan-message-content"
+                                        dangerouslySetInnerHTML={{ __html: message.content }}
+                                    />
+                                    <div className="scan-message-timestamp">{message.timestamp}</div>
+                                </div>
+                            );
+                        })}
                         {isTyping && (
-                            <div className="scan-message assistant typing">
+                            <div className="scan-message-typing">
                                 <span className="typing-indicator">...</span>
                             </div>
                         )}

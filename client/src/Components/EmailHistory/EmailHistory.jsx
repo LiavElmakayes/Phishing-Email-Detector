@@ -15,8 +15,7 @@ const CustomDropdown = ({ filterStatus, setFilterStatus }) => {
     const options = [
         { value: "All Status", label: "All Status" },
         { value: "Legitimate", label: "Legitimate" },
-        { value: "Phishing", label: "Phishing" },
-        { value: "Suspicious", label: "Suspicious" }
+        { value: "Phishing", label: "Phishing" }
     ];
 
     // Close dropdown when clicking outside
@@ -89,12 +88,10 @@ const EmailHistory = () => {
     const [selectedEmail, setSelectedEmail] = useState(null);
     const [selectedScanData, setSelectedScanData] = useState(null);
     const [selectedChat, setSelectedChat] = useState(null);
-    const [isChatOpen, setIsChatOpen] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('All Status');
     const [deleteConfirmation, setDeleteConfirmation] = useState(null);
-    const [forceUnminimize, setForceUnminimize] = useState(false);
     const user = useSelector((state) => state.AuthReducer.user);
 
     useEffect(() => {
@@ -138,7 +135,7 @@ const EmailHistory = () => {
 
     const totalScans = scanHistory.length;
     const legitimateScans = scanHistory.filter(scan => scan.legitimacy === 'Legitimate').length;
-    const suspiciousScans = scanHistory.filter(scan => scan.legitimacy === 'Phishing' || scan.legitimacy === 'Suspicious').length;
+    const suspiciousScans = scanHistory.filter(scan => scan.legitimacy === 'Phishing').length;
     const totalRisk = scanHistory.reduce((sum, scan) => sum + (scan.result || 0), 0);
     const averageRisk = totalScans > 0 ? ((totalRisk / totalScans) * 10).toFixed(0) : 0;
 
@@ -286,9 +283,8 @@ const EmailHistory = () => {
 
     const handleChatSelect = (scan) => {
         setSelectedChat(scan);
-        setForceUnminimize(true); // Force unminimize when selecting a chat
         // Reset forceUnminimize after a short delay
-        setTimeout(() => setForceUnminimize(false), 100);
+        // setTimeout(() => setForceUnminimize(false), 100);
     };
 
     if (!user) return null;  // Return null if no user (during initial app loading)
@@ -419,10 +415,8 @@ const EmailHistory = () => {
                             <div className="card-legitimacy-status">
                                 {scan.legitimacy === 'Legitimate' ? (
                                     <span className="legitimacy-badge legitimate"><FaCheckCircle /> Legitimate</span>
-                                ) : scan.legitimacy === 'Phishing' ? (
-                                    <span className="legitimacy-badge phishing"><FaTimesCircle /> Phishing</span>
                                 ) : (
-                                    <span className="legitimacy-badge suspicious"><FaTimesCircle /> Suspicious</span>
+                                    <span className="legitimacy-badge phishing"><FaTimesCircle /> Phishing</span>
                                 )}
                             </div>
 
@@ -561,6 +555,7 @@ const EmailHistory = () => {
             {/* Update ScanChatBot to pass scanId */}
             {selectedChat && (
                 <ScanChatBot
+                    key={selectedChat.id} // Force remount to reset minimized state
                     scanData={selectedChat}
                     isOpen={true}
                     onClose={() => {
